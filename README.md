@@ -31,7 +31,7 @@ Live Connectivity: Visualizes real-time data exchange with glowing, animated con
 📸 Screenshots | لقطات من المشروع
 
 <p align="center">
-<img src="screen shot.png" width="100%" alt="[صورة لواجهة البرنامج الرئيسية]">
+<img src="ScreenShot.png" width="100%" alt="[صورة لواجهة البرنامج الرئيسية]">
 
 
 
