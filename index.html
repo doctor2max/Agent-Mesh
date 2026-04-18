@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agent Mesh - Neon Workstation Pro</title>
+    <title>Agent Mesh - Pro Testing Environment</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Tajawal:wght@300;400;700;900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -11,445 +13,576 @@
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
     <style>
+        :root {
+            --c-bg: #03060f;
+            --c-surface: #080f1e;
+            --c-panel: #0b1323;
+            --c-indigo: #6366f1;
+            --c-emerald: #10b981;
+            --c-sky: #0ea5e9;
+            --c-border: rgba(255,255,255,0.06);
+            --c-border-md: rgba(255,255,255,0.10);
+            --c-text-dim: rgba(148,163,184,0.7);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
         body {
-            background-color: #020617;
-            background-image: radial-gradient(circle at 2px 2px, rgba(99, 102, 241, 0.08) 1.5px, transparent 0);
-            background-size: 50px 50px;
+            background: var(--c-bg);
+            background-image:
+                radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99,102,241,0.12) 0%, transparent 60%),
+                linear-gradient(rgba(99,102,241,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(99,102,241,0.03) 1px, transparent 1px);
+            background-size: 100% 100%, 60px 60px, 60px 60px;
+            font-family: 'Tajawal', sans-serif;
+            color: #e2e8f0;
+            overflow: hidden;
+            height: 100vh;
         }
 
-        .neon-border {
-            box-shadow: 0 0 15px rgba(99, 102, 241, 0.1);
+        /* ── Scrollbar ── */
+        ::-webkit-scrollbar { width: 3px; }
+        ::-webkit-scrollbar-thumb { background: #312e81; border-radius: 10px; }
+
+        /* ── Card States ── */
+        .agent-card {
+            background: var(--c-surface);
+            border: 1px solid var(--c-border);
+            border-radius: 18px;
+            transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        .agent-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 18px;
+            opacity: 0;
+            transition: opacity 0.6s ease;
+            pointer-events: none;
+        }
+        .state-sleeping::before { background: radial-gradient(circle at 50% 0%, rgba(99,102,241,0.06) 0%, transparent 70%); opacity: 1; }
+        .state-working {
+            border-color: rgba(16,185,129,0.5);
+            background: rgba(16,185,129,0.05);
+        }
+        .state-working::before { background: radial-gradient(circle at 50% 0%, rgba(16,185,129,0.15) 0%, transparent 70%); opacity: 1; }
+        .state-thinking {
+            border-color: rgba(14,165,233,0.5);
+            background: rgba(14,165,233,0.05);
+        }
+        .state-thinking::before { background: radial-gradient(circle at 50% 0%, rgba(14,165,233,0.15) 0%, transparent 70%); opacity: 1; }
+
+        /* ── Corner glow dots ── */
+        .agent-card .corner-dot {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: var(--c-border-md);
+            transition: all 0.4s ease;
+        }
+        .state-working .corner-dot { background: var(--c-emerald); box-shadow: 0 0 8px var(--c-emerald); animation: pulseDot 1.2s ease-in-out infinite; }
+        .state-thinking .corner-dot { background: var(--c-sky); box-shadow: 0 0 8px var(--c-sky); animation: pulseDot 0.8s ease-in-out infinite; }
+
+        /* ── Scan Line ── */
+        .scan-line {
+            position: absolute;
+            left: 0; right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(99,102,241,0.6), transparent);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .state-working .scan-line { background: linear-gradient(90deg, transparent, rgba(16,185,129,0.7), transparent); opacity: 1; animation: scanMove 2s linear infinite; }
+        .state-thinking .scan-line { background: linear-gradient(90deg, transparent, rgba(14,165,233,0.7), transparent); opacity: 1; animation: scanMove 1.4s linear infinite; }
+
+        /* ── Progress Bar ── */
+        .progress-bar {
+            position: absolute;
+            bottom: 0; left: 0;
+            height: 2px;
+            width: 0%;
+            border-radius: 0 0 18px 18px;
+            opacity: 0;
+            transition: opacity 0.4s;
+        }
+        .state-working .progress-bar { background: linear-gradient(90deg, transparent, var(--c-emerald)); opacity: 1; animation: progressFill 3s ease-in-out infinite; }
+        .state-thinking .progress-bar { background: linear-gradient(90deg, transparent, var(--c-sky)); opacity: 1; animation: progressFill 2s ease-in-out infinite; }
+
+        /* ── Avatar SVG ── */
+        .avatar-wrap {
+            transition: transform 0.5s cubic-bezier(0.34,1.56,0.64,1);
+        }
+        .state-working .avatar-wrap { animation: workBounce 0.8s ease-in-out infinite alternate; }
+        .state-thinking .avatar-wrap { animation: thinkSway 1.5s ease-in-out infinite; }
+        .state-sleeping .avatar-wrap { animation: floatSlow 4s ease-in-out infinite; }
+
+        /* ── Particles ── */
+        .particle {
+            position: absolute;
+            border-radius: 50%;
+            pointer-events: none;
+            opacity: 0;
+        }
+        .state-working .particle { background: var(--c-emerald); animation: particleFly 1.5s ease-out infinite; }
+        .state-thinking .particle { background: var(--c-sky); animation: particleFly 2s ease-out infinite; }
+        .p1 { width: 3px; height: 3px; bottom: 30%; left: 20%; animation-delay: 0s !important; }
+        .p2 { width: 2px; height: 2px; bottom: 25%; left: 50%; animation-delay: 0.5s !important; }
+        .p3 { width: 3px; height: 3px; bottom: 35%; left: 75%; animation-delay: 1s !important; }
+
+        /* ── ZZZ ── */
+        .zzz-wrap span {
+            position: absolute;
+            font-family: 'Space Mono', monospace;
+            font-weight: 700;
+            color: #6366f1;
+            opacity: 0;
+        }
+        .zzz-wrap span:nth-child(1) { font-size: 9px; bottom: 55%; right: 15%; animation: zzzFloat 2.5s 0s infinite; }
+        .zzz-wrap span:nth-child(2) { font-size: 7px; bottom: 62%; right: 22%; animation: zzzFloat 2.5s 0.8s infinite; }
+        .zzz-wrap span:nth-child(3) { font-size: 6px; bottom: 68%; right: 28%; animation: zzzFloat 2.5s 1.6s infinite; }
+
+        /* ── Thinking Dots ── */
+        .think-dot {
+            width: 4px; height: 4px;
+            background: var(--c-sky);
+            border-radius: 50%;
+            display: inline-block;
+            margin: 0 2px;
+            opacity: 0;
+        }
+        .state-thinking .think-dot { animation: thinkBlink 1.2s ease-in-out infinite; }
+        .think-dot:nth-child(2) { animation-delay: 0.2s !important; }
+        .think-dot:nth-child(3) { animation-delay: 0.4s !important; }
+
+        /* ── Connection Line ── */
+        .conn-line { filter: drop-shadow(0 0 4px rgba(99,102,241,0.6)); }
+
+        /* ── Header ── */
+        .header-logo {
+            font-family: 'Space Mono', monospace;
+            letter-spacing: -1px;
         }
 
-        /* تحسينات استجابة الخلفية والحدود بناءً على الحالة */
-        .card-base {
-            backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .card-sleeping {
-            background-color: rgba(15, 23, 42, 0.6);
-        }
-        .card-working {
-            background-color: rgba(16, 185, 129, 0.15);
-            border-color: rgba(16, 185, 129, 0.4);
-            box-shadow: 0 0 25px rgba(16, 185, 129, 0.15);
-        }
-        .card-thinking {
-            background-color: rgba(14, 165, 233, 0.15);
-            border-color: rgba(14, 165, 233, 0.4);
-            box-shadow: 0 0 25px rgba(14, 165, 233, 0.15);
+        /* ── Log Item ── */
+        .log-item {
+            animation: logSlide 0.3s cubic-bezier(0.34,1.56,0.64,1);
         }
 
-        @keyframes zzz {
-            0% { transform: translate(0, 0) scale(0.4); opacity: 0; }
-            30% { opacity: 1; }
-            70% { opacity: 0.8; transform: translate(14px, -28px) scale(1.2); }
-            100% { transform: translate(22px, -48px) scale(0.9); opacity: 0; }
-        }
-        .animate-zzz { animation: zzz 2.2s infinite ease-out; }
-
-        @keyframes typing {
-            0%, 100% { transform: translateY(0) rotate(0deg); }
-            50% { transform: translateY(-3.5px) rotate(4deg); }
-        }
-        .animate-typing { animation: typing 0.12s infinite ease-in-out; }
-
-        @keyframes typingChar {
-            0% { opacity: 0; transform: translateY(5px); }
-            20% { opacity: 1; transform: translateY(0); }
-            80% { opacity: 1; }
-            100% { opacity: 0; transform: translateY(-10px); }
-        }
-        .animate-char { animation: typingChar 0.8s infinite ease-in-out; }
-
-        @keyframes keyPress {
-            0%, 100% { transform: scale(1); opacity: 0.6; }
-            50% { transform: scale(1.3); opacity: 1; }
-        }
-        .animate-keyboard { animation: keyPress 0.3s infinite alternate; }
-
-        @keyframes screen-glow {
-            0%, 100% { filter: drop-shadow(0 0 3px #6366f1); opacity: 0.5; }
-            50% { filter: drop-shadow(0 0 12px #818cf8); opacity: 0.9; }
-        }
-        .animate-glow { animation: screen-glow 1.2s infinite; }
-
-        @keyframes thinkPulse {
-            0% { opacity: 0; transform: scale(0.5) translateY(0px); }
-            50% { opacity: 1; transform: scale(1.3) translateY(-10px); }
-            100% { opacity: 0; transform: scale(0.8) translateY(-20px); }
-        }
-        .animate-think-question { animation: thinkPulse 1.4s infinite ease-out; }
-
-        @keyframes spinThink {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-        .animate-think-spin { animation: spinThink 1s linear infinite; transform-origin: center; }
-
-        @keyframes screenThinkGlow {
-            0%, 100% { filter: drop-shadow(0 0 2px #f59e0b); opacity: 0.6; }
-            50% { filter: drop-shadow(0 0 12px #fbbf24); opacity: 1; }
-        }
-        .animate-glow-thinking { animation: screenThinkGlow 0.9s infinite alternate; }
-
-        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
-        .animate-float { animation: float 5s ease-in-out infinite; }
-
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #4338ca; border-radius: 10px; }
-
-        .gradient-text {
-            background: linear-gradient(90deg, #818cf8, #c084fc);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+        /* ── Status Pill ── */
+        .status-pill {
+            font-family: 'Space Mono', monospace;
+            letter-spacing: 0.05em;
         }
 
-        @keyframes dash { to { stroke-dashoffset: -100; } }
-        .animate-dash { animation: dash 2.5s linear infinite; }
-
-        @keyframes connection-glow {
-            0%, 100% { filter: drop-shadow(0 0 8px #6366f1); stroke-opacity: 0.8; }
-            50% { filter: drop-shadow(0 0 20px #c084fc); stroke-opacity: 1; }
+        /* ── Keyframes ── */
+        @keyframes scanMove {
+            0% { top: -2px; }
+            100% { top: calc(100% + 2px); }
         }
-        .animate-connection { animation: connection-glow 1s infinite; }
+        @keyframes progressFill {
+            0% { width: 0%; opacity: 0.6; }
+            60% { width: 85%; opacity: 1; }
+            100% { width: 100%; opacity: 0.3; }
+        }
+        @keyframes pulseDot {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.6); opacity: 0.5; }
+        }
+        @keyframes workBounce {
+            0% { transform: translateY(0) scale(1); }
+            100% { transform: translateY(-4px) scale(1.03); }
+        }
+        @keyframes thinkSway {
+            0%, 100% { transform: rotate(-2deg); }
+            50% { transform: rotate(2deg); }
+        }
+        @keyframes floatSlow {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-6px); }
+        }
+        @keyframes particleFly {
+            0% { transform: translateY(0) scale(1); opacity: 0.8; }
+            100% { transform: translateY(-40px) scale(0); opacity: 0; }
+        }
+        @keyframes zzzFloat {
+            0% { transform: translate(0,0) scale(0.5); opacity: 0; }
+            30% { opacity: 0.8; }
+            100% { transform: translate(-15px,-30px) scale(1); opacity: 0; }
+        }
+        @keyframes thinkBlink {
+            0%, 100% { opacity: 0.2; transform: scale(0.8); }
+            50% { opacity: 1; transform: scale(1.2); }
+        }
+        @keyframes logSlide {
+            0% { transform: translateY(-8px); opacity: 0; }
+            100% { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes dashFlow { to { stroke-dashoffset: -100; } }
+        @keyframes onlinePulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(16,185,129,0.4); }
+            50% { box-shadow: 0 0 0 5px rgba(16,185,129,0); }
+        }
+        @keyframes cardEntry {
+            0% { opacity: 0; transform: scale(0.85) translateY(10px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .card-enter { animation: cardEntry 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards; }
     </style>
 </head>
-<body class="text-slate-200 overflow-hidden h-screen font-sans">
+<body class="h-screen overflow-hidden">
     <div id="root" class="h-full"></div>
 
     <script type="text/babel">
         const { useState, useEffect, useRef, useCallback } = React;
 
-        const AgentAvatar = ({ color, gender, status, isCompactView }) => {
+        const AgentAvatar = ({ color, gender, status }) => {
             const isSleeping = status === 'sleeping';
             const isWorking = status === 'working';
             const isThinking = status === 'thinking';
-
             return (
-                <div className={`relative flex flex-col items-center justify-center animate-float ${isCompactView ? 'scale-[0.8] mt-0' : 'scale-125 mt-4'}`}>
-                    <svg width="120" height="120" viewBox="0 0 50 50" className="drop-shadow-2xl">
+                <div className="avatar-wrap" style={{display:'flex',alignItems:'center',justifyContent:'center'}}>
+                    <svg width="72" height="72" viewBox="0 0 50 50">
                         {gender === 'female' && (
-                            <path d="M10 25 Q10 5 25 5 Q40 5 40 25 L42 32 L8 32 Z" fill="#1a120b" />
+                            <path d="M10 25 Q10 5 25 5 Q40 5 40 25 L42 32 L8 32 Z" fill="#1e1b4b" />
                         )}
                         <rect x="12" y="30" width="26" height="15" rx="6" fill={color} />
-                        <circle cx="25" cy="45" r="8" fill={color} opacity="0.15" />
-                        <rect x="16" y="10" width="18" height="18" rx="8" fill="#ffdbac" />
+                        <rect x="10" y="42" width="30" height="6" rx="1.5" fill="#05080f" />
+                        {(isWorking || isThinking) && (
+                            <rect x="12" y="43" width="26" height="4" rx="1"
+                                fill={isWorking ? '#10b981' : '#0ea5e9'}
+                                style={{animation: 'pulseDot 1s ease-in-out infinite'}} />
+                        )}
+                        <rect x="16" y="10" width="18" height="18" rx="8" fill="#ffe0b0" />
                         <g>
                             {isSleeping ? (
-                                <g stroke="#2d1b14" strokeWidth="1" fill="none">
-                                    <path d="M19 18 Q21 20 23 18" /><path d="M27 18 Q29 20 31 18" />
-                                </g>
-                            ) : isThinking ? (
-                                <g fill="#2d1b14">
-                                    <circle cx="21" cy="18" r="1.3" /><circle cx="29" cy="18" r="1.3" />
+                                <g>
+                                    <path d="M19 19 Q21 17 23 19" stroke="#2d1b14" strokeWidth="1.2" fill="none" strokeLinecap="round" />
+                                    <path d="M27 19 Q29 17 31 19" stroke="#2d1b14" strokeWidth="1.2" fill="none" strokeLinecap="round" />
                                 </g>
                             ) : (
-                                <g fill="#2d1b14">
-                                    <circle cx="21" cy="19" r="1.3" /><circle cx="29" cy="19" r="1.3" />
+                                <g>
+                                    <circle cx="21" cy="20" r="2" fill="#2d1b14" />
+                                    <circle cx="29" cy="20" r="2" fill="#2d1b14" />
+                                    {isThinking && (
+                                        <g>
+                                            <circle cx="21" cy="20" r="0.8" fill="white" opacity="0.7" />
+                                            <circle cx="29" cy="20" r="0.8" fill="white" opacity="0.7" />
+                                        </g>
+                                    )}
                                 </g>
                             )}
-                            <path d={isThinking ? "M23 24 L27 24" : "M22 23 Q25 25 28 23"} stroke="#2d1b14" fill="none" strokeWidth="0.8" strokeLinecap="round" />
                         </g>
-                        {gender === 'female' ? (
-                            <path d="M16 13 Q25 8 34 13 L34 17 Q25 12 16 17 Z" fill="#2d1b14" />
-                        ) : (
-                            <path d="M16 12 Q25 5 34 12" stroke="#2d1b14" strokeWidth="3" strokeLinecap="round" fill="none" />
-                        )}
-                        <g transform="translate(5, 30)">
-                            <rect x="19" y="11" width="2" height="3" fill="#334155" />
-                            <rect x="15" y="14" width="10" height="1.5" rx="0.5" fill="#1e293b" />
-                            <rect x="10" y="2" width="20" height="10" rx="2" fill="#0f172a" stroke="#475569" strokeWidth="0.5" />
-                            {isWorking && <rect x="11" y="3" width="18" height="8" rx="1" fill="#10b981" className="animate-glow" />}
-                            {isThinking && <rect x="11" y="3" width="18" height="8" rx="1" fill="#0ea5e9" className="animate-glow-thinking" />}
-                            <rect x="12" y="15" width="16" height="2.5" rx="0.5" fill="#1e293b" />
-                        </g>
-                        {isWorking && !isCompactView && (
+                        {isWorking && (
                             <g>
-                                <circle cx="17" cy="46" r="2.2" fill="#ffdbac" className="animate-typing" />
-                                <circle cx="33" cy="46" r="2.2" fill="#ffdbac" className="animate-typing" style={{animationDelay: '0.05s'}} />
+                                <path d="M13 33 L37 33" stroke="#10b981" strokeWidth="0.8" opacity="0.4" />
                             </g>
                         )}
                     </svg>
+                </div>
+            );
+        };
+
+        const AgentCard = ({ agent, refCallback }) => {
+            const stateClass = `state-${agent.status}`;
+            const isWorking = agent.status === 'working';
+            const isThinking = agent.status === 'thinking';
+            const isSleeping = agent.status === 'sleeping';
+
+            return (
+                <div
+                    ref={refCallback}
+                    className={`agent-card ${stateClass} card-enter`}
+                    style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', height: '170px' }}
+                >
+                    <div className="corner-dot" />
+                    <div className="scan-line" />
+                    <div className="progress-bar" />
+                    <div className="particle p1" />
+                    <div className="particle p2" />
+                    <div className="particle p3" />
+
+                    <AgentAvatar color={agent.color} gender={agent.gender} status={agent.status} />
 
                     {isSleeping && (
-                        <div className={`absolute pointer-events-none ${isCompactView ? 'top-6 right-6' : 'top-4 right-6'}`}>
-                            <span className="absolute text-[16px] font-black text-slate-400 animate-zzz">Z</span>
-                            <span className="absolute text-[12px] font-black text-slate-500 animate-zzz" style={{animationDelay: '0.6s'}}>z</span>
+                        <div className="zzz-wrap" style={{position:'absolute',inset:0,pointerEvents:'none'}}>
+                            <span>Z</span><span>Z</span><span>z</span>
                         </div>
                     )}
 
-                    {isWorking && !isCompactView && (
-                        <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 flex gap-1 bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-full border border-emerald-500/30">
-                            <span className="text-emerald-300 text-xs font-mono animate-char">⌨️</span>
-                            <span className="text-emerald-300 text-xs font-mono animate-char" style={{animationDelay: '0.15s'}}>⚡</span>
-                            <span className="text-emerald-300 text-xs font-mono animate-char" style={{animationDelay: '0.3s'}}>▶</span>
-                            <div className="w-3 h-3 bg-emerald-400 rounded-full animate-keyboard ml-1 mt-0.5"></div>
+                    <div style={{ textAlign: 'center', marginTop: '2px' }}>
+                        <div style={{ fontSize: '12px', fontWeight: 700, color: '#f1f5f9', letterSpacing: '0.01em', lineHeight: 1.2 }}>
+                            {agent.name}
                         </div>
-                    )}
+                        <div style={{ fontSize: '9px', fontWeight: 700, color: isWorking ? '#10b981' : isThinking ? '#0ea5e9' : 'rgba(99,102,241,0.7)', textTransform: 'uppercase', letterSpacing: '0.12em', marginTop: '2px', fontFamily: 'Space Mono, monospace' }}>
+                            {agent.role}
+                        </div>
+                    </div>
 
-                    {isThinking && !isCompactView && (
-                        <>
-                            <div className="absolute -top-6 -right-2 pointer-events-none z-10">
-                                <span className="absolute text-[20px] font-black text-sky-400 animate-think-question">?</span>
-                                <span className="absolute text-[14px] font-bold text-sky-300 animate-think-question" style={{animationDelay: '0.4s', left: '-12px', top: '5px'}}>?</span>
-                            </div>
-                            <div className="absolute top-8 left-4 w-6 h-6 z-10">
-                                <svg viewBox="0 0 24 24" className="w-5 h-5 animate-think-spin opacity-80">
-                                    <circle cx="12" cy="12" r="10" stroke="#38bdf8" strokeWidth="2" fill="none" strokeDasharray="15 10"/>
-                                    <circle cx="12" cy="12" r="3" fill="#0ea5e9" />
-                                </svg>
-                            </div>
-                        </>
+                    {(isWorking || isThinking) && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '2px', marginTop: '2px' }}>
+                            <span className="think-dot" style={{ background: isWorking ? '#10b981' : '#0ea5e9' }} />
+                            <span className="think-dot" style={{ background: isWorking ? '#10b981' : '#0ea5e9' }} />
+                            <span className="think-dot" style={{ background: isWorking ? '#10b981' : '#0ea5e9' }} />
+                        </div>
                     )}
                 </div>
             );
         };
 
         function App() {
-            const [agents, setAgents] = useState([
-                { id: '1', name: 'الوكيل 01', role: 'DevOps Engine', color: '#6366f1', gender: 'male', status: 'thinking' },
-                { id: '2', name: 'الوكيلة 02', role: 'Security Shield', color: '#ec4899', gender: 'female', status: 'sleeping' },
-                { id: '3', name: 'الوكيل 03', role: 'Data Analytics', color: '#10b981', gender: 'male', status: 'working' },
-                { id: '4', name: 'الوكيل 04', role: 'AI Core', color: '#f59e0b', gender: 'male', status: 'sleeping' }
-            ]);
+            const [agents, setAgents] = useState([]);
+            const [connections, setConnections] = useState([]);
             const [logs, setLogs] = useState([]);
-            const [showAddModal, setShowAddModal] = useState(false);
-            const [newAgent, setNewAgent] = useState({ name: '', role: '', gender: 'male', color: '#818cf8' });
-            const [isCompactView, setIsCompactView] = useState(false);
-
-            const [activeConnections, setActiveConnections] = useState([]);
-            const [positions, setPositions] = useState({});
-
+            const [isOnline, setIsOnline] = useState(false);
+            const containerRef = useRef(null);
             const agentRefs = useRef({});
             const socketRef = useRef(null);
-            const contentRef = useRef(null);
 
             const addLog = useCallback((text, type = 'info') => {
-                setLogs(prev => [{ id: Math.random(), text, type, time: new Date().toLocaleTimeString('ar-EG') }, ...prev].slice(0, 30));
-            }, []);
-
-            const updateStatus = useCallback((id, status) => {
-                setAgents(prev => prev.map(a => a.id === id ? { ...a, status } : a));
-                if (status === 'working' || status === 'thinking') {
-                    // Fallback logic in case the backend doesn't send 'sleeping'
-                    setTimeout(() => updateStatus(id, 'done'), 5000);
-                } else if (status === 'done') {
-                    setTimeout(() => updateStatus(id, 'sleeping'), 3000);
-                }
-            }, []);
-
-            const triggerConnection = useCallback((fromId, toId) => {
-                if (!fromId || !toId) return;
-                const connId = Math.random().toString();
-                setActiveConnections(prev => [...prev, { id: connId, fromId, toId }]);
-                setTimeout(() => setActiveConnections(prev => prev.filter(c => c.id !== connId)), 3000);
+                setLogs(prev => [{
+                    id: Date.now() + Math.random(),
+                    text, type,
+                    time: new Date().toLocaleTimeString('ar-EG')
+                }, ...prev].slice(0, 60));
             }, []);
 
             useEffect(() => {
-                try {
-                    socketRef.current = io('http://localhost:5000');
-                    socketRef.current.on('connect', () => addLog('تم الربط بمحرك بايثون بنجاح', 'success'));
-                    socketRef.current.on('ui_command', (data) => {
-                        if (data.action === 'connection' && data.target_id) {
-                            addLog(`تم إنشاء اتصال بين Node_${data.agent_id} و Node_${data.target_id}`, 'msg');
-                            triggerConnection(data.agent_id, data.target_id);
-                        } else {
-                            addLog(`أمر وارد: ${data.action} للوكيل رقم ${data.agent_id}`, 'msg');
-                            updateStatus(data.agent_id, data.action);
+                socketRef.current = io('http://localhost:5000');
+                socketRef.current.on('connect', () => { setIsOnline(true); addLog('اتصال مستقر مع المحرك', 'success'); });
+                socketRef.current.on('disconnect', () => {
+                    setIsOnline(false);
+                    addLog('فشل الاتصال بالسيرفر', 'error');
+                    setAgents(prev => prev.map(a => ({ ...a, status: 'sleeping' })));
+                    setConnections([]);
+                });
+                socketRef.current.on('add_agent', (data) => {
+                    setAgents(prev => {
+                        const exists = prev.find(a => a.id === data.id);
+                        if (exists) {
+                            // وكيل موجود → حدّث بياناته فقط، لا تمس الـ status
+                            return prev.map(a => a.id === data.id ? { ...a, ...data, status: a.status } : a);
                         }
+                        return [...prev, { ...data, status: 'sleeping' }];
                     });
-                } catch (e) {
-                    console.log("Socket connection bypassed for demo.");
-                }
-                return () => socketRef.current && socketRef.current.disconnect();
-            }, [addLog, updateStatus, triggerConnection]);
+                });
 
-            const handleAddAgent = (e) => {
-                e.preventDefault();
-                if (!newAgent.name || !newAgent.role) return;
-                const id = (agents.length + 1).toString();
-                setAgents([...agents, { ...newAgent, id, status: 'sleeping' }]);
-                addLog(`تم تسجيل وكيل جديد: ${newAgent.name}`, 'success');
-                setShowAddModal(false);
-                setNewAgent({ name: '', role: '', gender: 'male', color: '#818cf8' });
-            };
+                // حدث اختياري: السيرفر يرسل قائمة كاملة جديدة → استبدال كامل
+                socketRef.current.on('set_agents', (list) => {
+                    setAgents(list.map(d => ({ ...d, status: 'sleeping' })));
+                });
 
-            // حساب وتحديث الإحداثيات لرسم الخطوط
-            useEffect(() => {
-                const updatePos = () => {
-                    if (!contentRef.current) return;
-                    const contRect = contentRef.current.getBoundingClientRect();
-                    const newPos = {};
-
-                    agents.forEach(a => {
-                        const el = agentRefs.current[a.id];
-                        if (el) {
-                            const elRect = el.getBoundingClientRect();
-                            newPos[a.id] = {
-                                x: elRect.left - contRect.left + elRect.width / 2,
-                                y: elRect.top - contRect.top + elRect.height / 2
-                            };
-                        }
-                    });
-                    setPositions(newPos);
-                };
-
-                const timer = setTimeout(updatePos, 150); // المهلة للسماح للأنيميشن بالانتهاء
-                window.addEventListener('resize', updatePos);
-
-                const ro = new ResizeObserver(updatePos);
-                if (contentRef.current) ro.observe(contentRef.current);
-
-                return () => {
-                    clearTimeout(timer);
-                    window.removeEventListener('resize', updatePos);
-                    ro.disconnect();
-                };
-            }, [agents, isCompactView]); // تم إضافة isCompactView لضمان تحديث الخطوط عند التصغير/التكبير
+                // حدث اختياري: مسح كل الوكلاء
+                socketRef.current.on('clear_agents', () => {
+                    setAgents([]);
+                    setConnections([]);
+                });
+                socketRef.current.on('ui_command', (data) => {
+                    if (data.action === 'connection') {
+                        const connId = `${data.agent_id}-${data.target_id}-${Date.now()}`;
+                        setConnections(prev => [...prev, { id: connId, from: data.agent_id, to: data.target_id }]);
+                        setTimeout(() => setConnections(prev => prev.filter(c => c.id !== connId)), 4000);
+                    } else {
+                        setAgents(prev => prev.map(a => a.id === data.agent_id ? { ...a, status: data.action } : a));
+                    }
+                });
+                socketRef.current.on('server_log', (data) => addLog(data.text, data.type));
+                return () => socketRef.current.disconnect();
+            }, [addLog]);
 
             return (
-                <div className="h-full flex flex-col p-6 gap-6 relative overflow-hidden bg-slate-950">
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2/3 h-1.5 bg-indigo-500/30 blur-2xl"></div>
+                <div style={{ height: '100%', display: 'flex', flexDirection: 'column', padding: '20px 24px', gap: '16px' }}>
 
-                    <header className="flex justify-between items-center border-b border-white/10 pb-4 z-20">
+                    {/* Header */}
+                    <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '14px' }}>
                         <div>
-                            <h1 className="text-3xl font-black tracking-tighter text-white uppercase italic">Agent<span className="text-indigo-500">Mesh</span></h1>
-                            <p className="text-xs text-slate-400 font-mono mt-1 tracking-[0.2em]">NEURAL INTERFACE PRO V3.0</p>
-                        </div>
-                        <div className="flex gap-4 items-center">
-                            {/* زر التبديل بين وضع العرض */}
-                            <button onClick={() => setIsCompactView(!isCompactView)} className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 border ${isCompactView ? 'bg-indigo-500/20 border-indigo-500 text-indigo-300' : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'}`}>
-                                {isCompactView ? (
-                                    <><svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg> تكبير البطاقات</>
-                                ) : (
-                                    <><svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 14h6m0 0v6m0-6l-7 7m17-11h-6m0 0V4m0 6l7-7m-7 17v-6m0 0h6m-6 0l7 7M10 4v6m0 0H4m6 0L3 3"></path></svg> عرض مصغر</>
-                                )}
-                            </button>
-
-                            <button onClick={() => setShowAddModal(true)} className="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-xl text-sm font-black transition-all shadow-lg shadow-indigo-600/20 flex items-center gap-2">
-                                <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg>
-                                وكيل جديد
-                            </button>
-                            <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 rounded-full border border-emerald-500/20">
-                                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                                <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Live</span>
+                            <div className="header-logo" style={{ fontSize: '20px', fontWeight: 700, color: '#fff', lineHeight: 1 }}>
+                                AGENT<span style={{ color: '#6366f1' }}>MESH</span>
+                                <span style={{ fontSize: '9px', color: 'rgba(100,116,139,0.7)', marginRight: '10px', fontWeight: 400 }}>v3.5 DYNAMIC</span>
                             </div>
+                        </div>
+                        <div className="status-pill" style={{
+                            padding: '5px 14px',
+                            borderRadius: '100px',
+                            fontSize: '9px',
+                            fontWeight: 700,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.08em',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            background: isOnline ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)',
+                            border: `1px solid ${isOnline ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.25)'}`,
+                            color: isOnline ? '#10b981' : '#ef4444',
+                        }}>
+                            <span style={{
+                                width: '6px', height: '6px', borderRadius: '50%',
+                                background: isOnline ? '#10b981' : '#ef4444',
+                                display: 'inline-block',
+                                animation: isOnline ? 'onlinePulse 2s ease-in-out infinite' : 'none'
+                            }} />
+                            {isOnline ? 'Engine Online' : 'Engine Offline'}
                         </div>
                     </header>
 
-                    <div className="flex-1 flex gap-6 overflow-hidden z-10">
-                        {/* مساحة عرض الوكلاء */}
-                        <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 relative">
-                            <div ref={contentRef} className="relative min-h-full pb-12">
+                    {/* Main */}
+                    <div style={{ flex: 1, display: 'flex', gap: '16px', overflow: 'hidden', position: 'relative' }} ref={containerRef}>
 
-                                {/* طبقة الخطوط */}
-                                <svg className="absolute top-0 left-0 w-full h-full pointer-events-none z-0" style={{ overflow: 'visible' }}>
-                                    {activeConnections.map(conn => {
-                                        const posA = positions[conn.fromId];
-                                        const posB = positions[conn.toId];
-                                        if (!posA || !posB) return null;
-                                        return (
-                                            <g key={conn.id}>
-                                                <line x1={posA.x} y1={posA.y} x2={posB.x} y2={posB.y}
-                                                      stroke="#6366f1" strokeWidth="4" className="animate-connection" />
-                                                <line x1={posA.x} y1={posA.y} x2={posB.x} y2={posB.y}
-                                                      stroke="#e879f9" strokeWidth="4"
-                                                      strokeDasharray="15,15" className="animate-dash" />
-                                                <circle cx={posA.x} cy={posA.y} r="6" fill="#d946ef" className="animate-pulse" filter="drop-shadow(0 0 10px #d946ef)" />
-                                                <circle cx={posB.x} cy={posB.y} r="6" fill="#d946ef" className="animate-pulse" filter="drop-shadow(0 0 10px #d946ef)" />
-                                            </g>
-                                        );
-                                    })}
-                                </svg>
+                        {/* SVG Connections */}
+                        <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0 }}>
+                            <defs>
+                                <filter id="glow">
+                                    <feGaussianBlur stdDeviation="3" result="blur" />
+                                    <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+                                </filter>
+                            </defs>
+                            {connections.map((conn, idx) => {
+                                const elA = agentRefs.current[conn.from];
+                                const elB = agentRefs.current[conn.to];
+                                if (!elA || !elB || !containerRef.current) return null;
+                                const rA = elA.getBoundingClientRect();
+                                const rB = elB.getBoundingClientRect();
+                                const c = containerRef.current.getBoundingClientRect();
 
-                                {/* شبكة البطاقات (تتغير الأعمدة حسب وضع العرض) */}
-                                <div className={`grid grid-cols-1 md:grid-cols-2 ${isCompactView ? 'lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4' : 'xl:grid-cols-3 gap-8'} relative z-10 pt-2`}>
-                                    {agents.map(agent => (
-                                        <div key={agent.id}
-                                             ref={el => agentRefs.current[agent.id] = el}
-                                             className={`relative flex flex-col items-center justify-between group neon-border card-base card-${agent.status} ${isCompactView ? 'h-[14rem] rounded-[1.5rem] p-3' : 'h-[22rem] rounded-[2.5rem] p-6'}`}>
+                                // نقطة الخروج: أسفل البطاقة A — مركزها أفقياً
+                                const x1 = rA.left - c.left + rA.width / 2;
+                                const y1 = rA.top - c.top + rA.height;
 
-                                            <div className={`absolute top-4 left-5 font-mono font-bold uppercase tracking-widest ${isCompactView ? 'text-[9px] text-slate-500' : 'text-xs text-slate-400'}`}>Node_{agent.id}</div>
+                                // نقطة الوصول: أسفل البطاقة B — مركزها أفقياً
+                                const x2 = rB.left - c.left + rB.width / 2;
+                                const y2 = rB.top - c.top + rB.height;
 
-                                            <div className="flex-1 flex items-center justify-center w-full">
-                                                <AgentAvatar color={agent.color} gender={agent.gender} status={agent.status} isCompactView={isCompactView} />
-                                            </div>
+                                // مستوى التوجيه أسفل البطاقتين + هامش يتغير بالـ index لمنع التداخل
+                                const routeOffset = 28 + (idx % 4) * 14;
+                                const routeY = Math.max(y1, y2) + routeOffset;
 
-                                            <div className={`w-full text-center ${isCompactView ? 'mt-2 mb-1' : 'mt-4 mb-2'} z-20`}>
-                                                <div className={`${isCompactView ? 'text-lg' : 'text-2xl'} font-black text-white mb-1`}>{agent.name}</div>
-                                                <div className={`${isCompactView ? 'text-[9px] px-2 py-0.5' : 'text-xs px-3 py-1'} text-slate-200 font-bold uppercase tracking-widest bg-black/20 rounded-full inline-block`}>{agent.role}</div>
-                                            </div>
+                                // المسار: أسفل A → نزول عمودي → أفقي → صعود لأسفل B
+                                const r = 8; // نصف قطر الزوايا المدوّرة
+                                const goDown1 = routeY - y1; // المسافة الرأسية من A للخط الأفقي
+                                const goDown2 = routeY - y2; // المسافة الرأسية من B للخط الأفقي
 
-                                            {!isCompactView && (
-                                                <div className="w-full mt-4 pt-4 border-t border-white/10 flex justify-between items-center px-4 z-20">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className={`w-3 h-3 rounded-full ${agent.status === 'sleeping' ? 'bg-slate-700' : agent.status === 'thinking' ? 'bg-sky-400 shadow-[0_0_12px_#38bdf8]' : 'bg-emerald-400 shadow-[0_0_12px_#34d399]'}`}></div>
-                                                        <span className="text-xs font-black text-slate-300 uppercase tracking-tighter">{agent.status}</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-3">
-                                                        <button onClick={() => {
-                                                            const others = agents.filter(a => a.id !== agent.id);
-                                                            if(others.length > 0) {
-                                                                const target = others[Math.floor(Math.random() * others.length)];
-                                                                triggerConnection(agent.id, target.id);
-                                                                addLog(`بث بيانات: Node_${agent.id} ↔ Node_${target.id}`, 'info');
-                                                            }
-                                                        }} className="p-1.5 bg-black/20 hover:bg-white/10 text-slate-300 rounded-lg transition-colors" title="إرسال إشارة للوكيل">
-                                                            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                                                        </button>
-                                                        <div className="text-[10px] text-slate-400 font-mono italic">SYNC_ACTIVE</div>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
+                                let d;
+                                if (Math.abs(x1 - x2) < 4) {
+                                    // نفس العمود تقريباً — خط مستقيم بسيط
+                                    d = `M ${x1} ${y1} L ${x2} ${y2}`;
+                                } else if (x1 < x2) {
+                                    // A على اليسار → B على اليمين
+                                    d = `M ${x1} ${y1}
+                                         L ${x1} ${routeY - r}
+                                         Q ${x1} ${routeY} ${x1 + r} ${routeY}
+                                         L ${x2 - r} ${routeY}
+                                         Q ${x2} ${routeY} ${x2} ${routeY - r}
+                                         L ${x2} ${y2}`;
+                                } else {
+                                    // A على اليمين → B على اليسار
+                                    d = `M ${x1} ${y1}
+                                         L ${x1} ${routeY - r}
+                                         Q ${x1} ${routeY} ${x1 - r} ${routeY}
+                                         L ${x2 + r} ${routeY}
+                                         Q ${x2} ${routeY} ${x2} ${routeY - r}
+                                         L ${x2} ${y2}`;
+                                }
+
+                                const connColor = '#818cf8';
+                                const pathLen = 200 + Math.abs(x1 - x2) + Math.abs(y1 - y2);
+
+                                return (
+                                    <g key={conn.id}>
+                                        {/* ظل متوهج خلف الخط */}
+                                        <path d={d} fill="none"
+                                            stroke="rgba(99,102,241,0.18)" strokeWidth="6"
+                                            strokeLinecap="round" strokeLinejoin="round" />
+                                        {/* الخط الرئيسي المتحرك */}
+                                        <path d={d} fill="none"
+                                            stroke={connColor} strokeWidth="1.8"
+                                            strokeLinecap="round" strokeLinejoin="round"
+                                            strokeDasharray="10 6"
+                                            style={{ animation: 'dashFlow 1.8s linear infinite' }} />
+                                        {/* نقطة البداية (مرسِل) */}
+                                        <circle cx={x1} cy={y1} r="4" fill={connColor} opacity="0.95" />
+                                        <circle cx={x1} cy={y1} r="7" fill="none" stroke={connColor} strokeWidth="1" opacity="0.4"
+                                            style={{ animation: 'pulseDot 1.5s ease-in-out infinite' }} />
+                                        {/* نقطة النهاية (مستقبِل) مع سهم صغير */}
+                                        <circle cx={x2} cy={y2} r="4" fill={connColor} opacity="0.95" />
+                                        <polygon
+                                            points={`${x2},${y2 - 10} ${x2 - 5},${y2 - 17} ${x2 + 5},${y2 - 17}`}
+                                            fill={connColor} opacity="0.85" />
+                                    </g>
+                                );
+                            })}
+                        </svg>
+
+                        {/* Agents Grid */}
+                        <div style={{ flex: 1, overflowY: 'auto', zIndex: 10 }}
+                             className="custom-scrollbar"
+                             style={{ flex: 1, overflowY: 'auto', zIndex: 10, paddingLeft: '4px' }}>
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+                                gap: '12px'
+                            }}>
+                                {agents.map(agent => (
+                                    <AgentCard
+                                        key={agent.id}
+                                        agent={agent}
+                                        refCallback={el => agentRefs.current[agent.id] = el}
+                                    />
+                                ))}
                             </div>
                         </div>
 
-                        {/* سجل النظام */}
-                        <aside className="w-80 bg-slate-900/60 backdrop-blur-3xl rounded-[2.5rem] border border-white/5 flex flex-col p-6 shadow-2xl relative z-20">
-                            <h2 className="text-xs font-black text-indigo-400 uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
-                                <div className="w-1.5 h-4 bg-indigo-500 rounded-full"></div> System Terminal
-                            </h2>
-                            <div className="flex-1 overflow-y-auto custom-scrollbar space-y-3 font-mono">
+                        {/* Log Panel */}
+                        <aside style={{
+                            width: '270px',
+                            background: 'rgba(8,15,30,0.7)',
+                            backdropFilter: 'blur(20px)',
+                            border: '1px solid rgba(255,255,255,0.05)',
+                            borderRadius: '18px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            padding: '16px',
+                            zIndex: 20,
+                        }}>
+                            <div style={{
+                                fontSize: '9px',
+                                fontWeight: 700,
+                                color: 'rgba(99,102,241,0.6)',
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.15em',
+                                marginBottom: '12px',
+                                fontFamily: 'Space Mono, monospace',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                            }}>
+                                <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#6366f1', display: 'inline-block', animation: 'pulseDot 2s infinite' }} />
+                                System Logs
+                            </div>
+                            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}
+                                 className="custom-scrollbar">
                                 {logs.map(log => (
-                                    <div key={log.id} className="text-[10px] leading-relaxed bg-black/40 p-3 rounded-xl border-r-2 border-indigo-600 transition-all hover:bg-black/60">
-                                        <span className="text-indigo-400/50 block mb-1 font-bold">[{log.time}]</span>
-                                        <span className={log.type === 'success' ? 'text-emerald-400' : 'text-slate-300'}>{log.text}</span>
+                                    <div key={log.id} className="log-item" style={{
+                                        padding: '6px 8px',
+                                        background: 'rgba(0,0,0,0.25)',
+                                        borderRadius: '8px',
+                                        borderRight: `2px solid ${log.type === 'success' ? '#10b981' : log.type === 'error' ? '#ef4444' : '#6366f1'}`,
+                                        fontSize: '10px',
+                                        fontFamily: 'Space Mono, monospace',
+                                        lineHeight: 1.5,
+                                    }}>
+                                        <span style={{ color: 'rgba(100,116,139,0.6)', marginLeft: '4px', fontSize: '9px' }}>[{log.time}]</span>
+                                        <span style={{ color: log.type === 'success' ? '#6ee7b7' : log.type === 'error' ? '#fca5a5' : '#c7d2fe' }}>
+                                            {log.text}
+                                        </span>
                                     </div>
                                 ))}
                             </div>
                         </aside>
                     </div>
-
-                    {showAddModal && (
-                        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-center justify-center p-6">
-                            <div className="bg-slate-900 border border-white/10 w-full max-w-md rounded-[3rem] p-10 shadow-2xl">
-                                <h3 className="text-2xl font-black mb-8 text-center gradient-text">إنشاء هوية وكيل جديد</h3>
-                                <form onSubmit={handleAddAgent} className="space-y-6">
-                                    <div>
-                                        <label className="block text-xs font-bold text-slate-400 uppercase mb-2">اسم الوكيل</label>
-                                        <input type="text" className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-3 focus:border-indigo-500 outline-none transition-all text-white" value={newAgent.name} onChange={e => setNewAgent({...newAgent, name: e.target.value})} placeholder="مثال: آليكس" />
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-bold text-slate-400 uppercase mb-2">الدور الوظيفي</label>
-                                        <input type="text" className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-3 focus:border-indigo-500 outline-none transition-all text-white" value={newAgent.role} onChange={e => setNewAgent({...newAgent, role: e.target.value})} placeholder="مثال: معالج بيانات" />
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <button type="button" onClick={() => setNewAgent({...newAgent, gender: 'male'})} className={`py-3 rounded-2xl text-xs font-bold border ${newAgent.gender === 'male' ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-black/20 border-white/5 text-slate-400'}`}>ذكر</button>
-                                        <button type="button" onClick={() => setNewAgent({...newAgent, gender: 'female'})} className={`py-3 rounded-2xl text-xs font-bold border ${newAgent.gender === 'female' ? 'bg-pink-600 border-pink-500 text-white' : 'bg-black/20 border-white/5 text-slate-400'}`}>أنثى</button>
-                                    </div>
-                                    <div className="flex gap-4 pt-4">
-                                        <button type="submit" className="flex-1 bg-indigo-600 hover:bg-indigo-500 py-4 rounded-2xl font-black text-sm transition-all text-white">تفعيل الوكيل</button>
-                                        <button type="button" onClick={() => setShowAddModal(false)} className="px-6 bg-slate-800 hover:bg-slate-700 py-4 rounded-2xl font-black text-sm transition-all text-white">إلغاء</button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                    )}
                 </div>
             );
         }

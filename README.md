@@ -1,86 +1,204 @@
-🌐 Agent Mesh - Neural Interface Pro V3.0
 
-📝 الوصف (Arabic)
+---
 
-Agent Mesh هو نظام محاكاة متطور لإدارة وتوجيه وكلاء الذكاء الاصطناعي في الوقت الفعلي. يتميز المشروع بواجهة مستخدم مستقبلية (Neon UI) تعتمد على تقنيات الويب الحديثة، مع خادم تحكم مركزي بلغة بايثون يدير تدفق البيانات والأوامر المباشرة بين الوكلاء.
+```markdown
+# 🌐 Agent Mesh - Pro Testing Environment
+### Dynamic AI Agents Management System (State Synchronization)
 
-✨ المميزات الرئيسية:
+نظام متقدم لإدارة وتنسيق وكلاء الذكاء الاصطناعي (AI Agents) يعتمد على بنية **Stateful OOP** ومزامنة الحالة لحظياً بين سيرفر Python وواجهة React.
 
-نظام أوامر مباشر: تنفيذ تسلسل محدد من العمليات (تفكير، عمل، نوم، اتصال) بدقة عالية.
+---
+---
+بالتأكيد يا دكتور ماكس، إضافة الصورة ستجعل ملف الـ `README` يبدو احترافياً جداً على GitHub ويجذب الانتباه فوراً.
 
-واجهة مستخدم ذكية: تدعم وضع "العرض المصغر" (Compact View) لمراقبة عدد كبير من الوكلاء في وقت واحد.
+بناءً على الأعراف البرمجية، الأفضل هو إنشاء مجلد باسم `assets` داخل مجلد مشروعك ووضع الصورة بداخله، لكي لا يتكركب المجلد الرئيسي بالصور.
 
-تفاعلات بصرية متقدمة: تغيير ألوان البطاقات ديناميكياً (أخضر للعمل، أزرق للتفكير) مع تأثيرات متحركة للأفاتار.
+### الخطوات العملية قبل تعديل الملف:
 
-شبكة اتصالات حية: رسم خطوط بيانات مضيئة بين الوكلاء عند تبادل المعلومات عبر WebSockets.
+1.  **إنشاء المجلد:** أنشئ مجلداً جديداً باسم `assets` داخل مجلد مشروعك الرئيسي `/ِِِSimA/`.
+2.  **نقل الصورة:** قم بنقل ملف الصورة الخاص بك وسمِّه بالضبط `ScreenShoot.png` وضعه داخل مجلد `assets`.
 
-📝 Description (English)
+**هيكل المشروع النهائي يجب أن يظهر هكذا:**
+* 📁 **SimA**
+    * 🖼️ `ScreenShoot.png` 
+    * 📄 `main.py`
+    * 📄 `index.html`
+    * 📄 `.env`
+    * 📄 `.gitignore`
+    * 📄 `README.md` **<-- سنقوم بتحديث هذا الملف الآن**
 
-Agent Mesh is an advanced simulation system for managing and orchestrating AI agents in real-time. The project features a futuristic Neon UI built with modern web technologies, controlled by a Python-based C2 server that manages data flow and direct command sequences.
+---
 
-✨ Key Features:
+إليك كود الـ `README.md` المحدث بالكامل مع إضافة الصورة في مكان بارز وبتنسيق احترافي:
 
-Direct Command Engine: Executes precise sequences (Thinking, Working, Sleeping, Connecting) with 2-second intervals.
+```markdown
+# 🌐 Agent Mesh - Pro Testing Environment
+### Dynamic AI Agents Management System (State Synchronization)
 
-Adaptive UI: Includes a Compact View mode to monitor dozens of agents simultaneously.
+**Mousa Owayna (Dr.MAX)** - *AI & Software Development Specialist*
 
-Dynamic Visuals: Cards change background colors based on state (Green for Working, Sky Blue for Thinking).
+> هذا المشروع جزء من سلسلة تطوير أدوات الأكاديمية التعليمية **"I Know MAX"**.
 
-Live Connectivity: Visualizes real-time data exchange with glowing, animated connection lines between nodes.
-
-📸 Screenshots | لقطات من المشروع
+---
+```
 
 <p align="center">
-<img src="ScreenShot.png" width="100%" alt="[صورة لواجهة البرنامج الرئيسية]">
-
-
-
-
-
-<em>واجهة المستخدم المستقبلية بنمط Neon UI</em>
+  <img src="ScreenShoot.png" alt="لقطة شاشة لوحة تحكم Agent Mesh" width="100%" style="border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+  <br>
+  <em>واجهة React التفاعلية تظهر الوكلاء والاتصالات اللحظية</em>
 </p>
 
+---
 
+## 🚀 نظرة عامة (Overview)
+هذا المشروع هو بيئة اختبار احترافية تهدف إلى محاكاة عمل "شبكة وكلاء" (Agent Mesh). يتم التحكم في الوكلاء وإرسال المهام إليهم عبر **Telegram Bot**، بينما تعرض الواجهة الرسومية (Frontend) تحركاتهم، حالتهم (Working, Thinking, Sleeping)، واتصالاتهم البصرية بشكل لحظي تماماً وبمزامنة كاملة مع الذاكرة الخلفية.
 
-🛠 Tech Stack | التقنيات المستخدمة
+## ✨ الميزات الرئيسية (Key Features)
+* **Real-time Synchronization:** مزامنة كاملة للحالة باستخدام **Socket.io**.
+* **Context Manager (with statement):** نظام ذكي للتحكم التلقائي بحالة الوكلاء داخل الكود.
+* **Dual Control:** إمكانية إصدار الأوامر عبر بوت التيليجرام ومراقبة النتائج في الواجهة الرسومية.
+* **Dynamic Visualization:** شبكة تفاعلية تعرض الوكلاء مع رسوم متحركة (Animations) لكل حالة.
+* **System Logs:** سجل نظام لحظي (Server Logs) يظهر في الواجهة لمتابعة تدفق البيانات.
 
-Frontend: React 18, Tailwind CSS, Lucide Icons.
+## 🛠 التقنيات المستخدمة (Tech Stack)
 
-Backend: Python 3.x, Flask, Flask-SocketIO.
+### Backend (Python)
+- **Flask & Flask-SocketIO:** لإدارة السيرفر والاتصالات اللحظية.
+- **PyTelegramBotAPI (Telebot):** للواجهة البرمجية لبوت التيليجرام.
+- **Object-Oriented Programming (OOP):** لتنظيم منطق الوكلاء والشبكة.
+- **Python-Dotenv:** لإدارة المتغيرات الحساسة (Environment Variables).
 
-Real-time: WebSockets (Socket.io).
+### Frontend (React)
+- **React.js (Functional Components & Hooks).**
+- **Tailwind CSS:** للتصميم العصري والواجهة الداكنة (Dark UI).
+- **Socket.io-client:** للاتصال الثنائي بالسيرفر.
 
-Styling: Custom CSS Animations (Neon Glow, Floating Effects).
+---
 
-🚀 How to Run | طريقة التشغيل
+## 📦 التثبيت والتشغيل (Setup & Installation)
 
-1. Backend Setup (Python)
+### 1. إعداد البيئة (Virtual Environment)
+```bash
+# إنشاء البيئة الافتراضية
+python -m venv venv
 
-قم بتثبيت المكتبات اللازمة ثم تشغيل ملف الخادم:
+# تفعيل البيئة (Mac/Linux)
+source venv/bin/activate
+```
 
-# Install dependencies
-pip install flask flask-socketio flask-cors requests
+### 2. تثبيت المكتبات (Dependencies)
+```bash
+pip install flask flask-socketio flask-cors pyTelegramBotAPI python-dotenv
+```
 
-# Run the server
-python app.py
+### 3. إعداد مفتاح التيليجرام (Security)
+قم بإنشاء ملف `.env` في المجلد الرئيسي وأضف مفتاحك:
+```env
+TELEGRAM_BOT_TOKEN=your_token_here
+```
 
+### 4. التشغيل
+1. قم بتشغيل سيرفر بايثون:
+   ```bash
+   python main.py
+   ```
+2. افتح ملف الـ HTML (الواجهة) في المتصفح على الرابط: `http://localhost:5000`.
 
-2. Frontend Setup
+---
 
-ببساطة قم بفتح ملف index.html في أي متصفح حديث.
+## 📂 هيكلية المشروع (Project Structure)
+```text
+├── assets/              # مجلد الصور والملفات المساعدة
+│   └── ScreenShoot.png  # لقطة شاشة للواجهة الرسومية
+├── main.py              # ملف السيرفر والمنطق البرمجي (Backend)
+├── index.html           # واجهة React التفاعلية (Frontend)
+├── .env                 # ملف المفاتيح السرية (تجاهله في Git)
+├── .gitignore           # الملفات المستثناة من الرفع
+└── README.md            # توثيق المشروع
+```
+```
 
-تأكد من أن خادم البايثون يعمل لتتمكن من رؤية التنسيق المباشر للوكلاء.
+### ماذا غيرنا؟
+لقد قمت بوضع الصورة تحت العنوان مباشرة باستخدام وسم HTML `<img>` بدلاً من تنسيق Markdown العادي، وذلك لسببين:
+1.  **التحكم:** يتيح لنا تحديد العرض `width="100%"` لضمان ملائمة الصورة للشاشة.
+2.  **التجميل:** أضفت لمسة تصميمية بسيطة (border-radius و box-shadow) لتبدو الصورة وكأنها تطفو على الشاشة في GitHub، مما يزيد من جاذبيتها.
 
-📁 Project Structure | هيكل المشروع
+أنت الآن جاهز تماماً لرفع مشروعك على GitHub يا دكتور!
+<p align="center">
+  <img src="ScreenShoot.png" alt="لقطة شاشة لوحة تحكم Agent Mesh" width="100%" style="border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+  <br>
+  <em>واجهة React التفاعلية تظهر الوكلاء والاتصالات اللحظية</em>
+</p>
 
-app.py: خادم البايثون (عقل النظام).
+---
+## 🚀 نظرة عامة (Overview)
+هذا المشروع هو بيئة اختبار احترافية تهدف إلى محاكاة عمل "شبكة وكلاء" (Agent Mesh). يتم التحكم في الوكلاء وإرسال المهام إليهم عبر **Telegram Bot**، بينما تعرض الواجهة الرسومية (Frontend) تحركاتهم، حالتهم (Working, Thinking, Sleeping)، واتصالاتهم البصرية بشكل لحظي تماماً.
 
-index.html: لوحة التحكم المستقبلية (React UI).
+## ✨ الميزات الرئيسية (Key Features)
+* **Real-time Synchronization:** مزامنة كاملة للحالة باستخدام **Socket.io**.
+* **Context Manager (with statement):** نظام ذكي للتحكم التلقائي بحالة الوكلاء داخل الكود.
+* **Dual Control:** إمكانية إصدار الأوامر عبر بوت التيليجرام ومراقبة النتائج في الواجهة الرسومية.
+* **Dynamic Visualization:** شبكة تفاعلية تعرض الوكلاء مع رسوم متحركة (Animations) لكل حالة.
+* **System Logs:** سجل نظام لحظي (Server Logs) يظهر في الواجهة لمتابعة تدفق البيانات.
 
-README.md: وثائق المشروع.
+## 🛠 التقنيات المستخدمة (Tech Stack)
 
-requirements.txt: المكتبات المطلوبة للبايثون.
+### Backend (Python)
+- **Flask & Flask-SocketIO:** لإدارة السيرفر والاتصالات اللحظية.
+- **PyTelegramBotAPI (Telebot):** للواجهة البرمجية لبوت التيليجرام.
+- **Object-Oriented Programming (OOP):** لتنظيم منطق الوكلاء والشبكة.
+- **Python-Dotenv:** لإدارة المتغيرات الحساسة (Environment Variables).
 
-📜 License
+### Frontend (React)
+- **React.js (Functional Components & Hooks).**
+- **Tailwind CSS:** للتصميم العصري والواجهة الداكنة (Dark UI).
+- **Socket.io-client:** للاتصال الثنائي بالسيرفر.
 
-هذا المشروع مرخص بموجب رخصة MIT.
+---
+
+## 📦 التثبيت والتشغيل (Setup & Installation)
+
+### 1. إعداد البيئة (Virtual Environment)
+```bash
+# إنشاء البيئة الافتراضية
+python -m venv venv
+
+# تفعيل البيئة (Mac/Linux)
+source venv/bin/activate
+```
+
+### 2. تثبيت المكتبات (Dependencies)
+```bash
+pip install flask flask-socketio flask-cors pyTelegramBotAPI python-dotenv
+```
+
+### 3. إعداد مفتاح التيليجرام (Security)
+قم بإنشاء ملف `.env` في المجلد الرئيسي وأضف مفتاحك:
+```env
+TELEGRAM_BOT_TOKEN=your_token_here
+```
+
+### 4. التشغيل
+1. قم بتشغيل سيرفر بايثون:
+   ```bash
+   python main.py
+   ```
+2. افتح ملف الـ HTML (الواجهة) في المتصفح على الرابط: `http://localhost:5000` (أو الرابط الذي حددته في الواجهة).
+
+---
+
+## 📂 هيكلية المشروع (Project Structure)
+```text
+├── main.py              # ملف السيرفر والمنطق البرمجي (Backend)
+├── index.html           # واجهة React التفاعلية (Frontend)
+├── .env                 # ملف المفاتيح السرية (تجاهله في Git)
+├── .gitignore           # الملفات المستثناة من الرفع
+└── README.md            # توثيق المشروع
+```
+
+## 👨‍💻 المطور (Author)
+**Mousa Owayna (Dr.MAX)**
+*Software Developer & AI Specialist*
+
+---
+> هذا المشروع جزء من سلسلة تطوير أدوات الأكاديمية التعليمية **"I Know MAX"**.

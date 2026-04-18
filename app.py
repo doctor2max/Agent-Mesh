@@ -1,201 +1,239 @@
-import threading
+
 import time
-import requests
-import random
-from flask import Flask, request, jsonify
+import threading
+import uuid
+from flask import Flask
 from flask_socketio import SocketIO, emit
 from flask_cors import CORS
+from telebot import types
+from contextlib import contextmanager
+import os
+from dotenv import load_dotenv
+import telebot
+# ==========================================
+# 1. الإعدادات العامة (Configuration)
+# ==========================================
 
-"""
-Agent Mesh Backend - Pro Version
---------------------------------
-This server acts as a central hub (C2) to control AI agents in a web interface.
-It supports real-time communication via Socket.IO and RESTful API for external controls.
 
-Author: AI Assistant
-License: MIT
-"""
+# تحميل المتغيرات من ملف .env
+load_dotenv()
 
-class Config:
-    """Configuration settings for the application."""
-    HOST = '127.0.0.1'
-    PORT = 5000
-    DEBUG = False
-    API_URL = f"http://{HOST}:{PORT}/api/control"
+# استدعاء المفتاح باستخدام os
+API_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
+
+# التأكد من أن المفتاح تم تحميله بنجاح
+if not API_TOKEN:
+    print("❌ خطأ: لم يتم العثور على TELEGRAM_BOT_TOKEN في ملف .env")
+else:
+    bot = telebot.TeleBot(API_TOKEN)
+    print("✅ تم تحميل مفتاح البوت بنجاح من البيئة.")
 
 app = Flask(__name__)
-# Enable CORS for cross-origin requests from the web dashboard
-CORS(app, resources={r"/*": {"origins": "*"}})
+CORS(app)
+# السماح بجميع الاتصالات (مهم لتجنب مشاكل CORS مع React)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
-# Initialize Socket.IO with threading mode for real-time UI updates
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
-# Global dictionary to track agent states locally in the backend
-agent_states = {
-    "1": "sleeping",
-    "2": "sleeping",
-    "3": "sleeping",
-    "4": "sleeping"
-}
+# ==========================================
+# 2. كلاس الوكيل (Agent Entity)
+# ==========================================
+class Agent:
+    def __init__(self, name, role, gender, color, agent_id=None):
+        self.id = str(agent_id) if agent_id else str(uuid.uuid4())[:6]
+        self.name = name
+        self.role = role
+        self.gender = gender
+        self.color = color
+        self.status = "sleeping"
 
-# =========================================================
-# 1. REST API Endpoints (نقاط نهاية واجهة البرمجة)
-# =========================================================
+    def set_status(self, status):
+        """تحديث حالة الوكيل وبثها فوراً لكل الواجهات المتصلة"""
+        self.status = status
+        socketio.emit('ui_command', {
+            "agent_id": self.id,
+            "action": status  # الواجهة تتوقع 'working', 'sleeping', 'thinking'
+        })
 
-@app.route('/api/control', methods=['POST'])
-def control_agent():
+    def to_dict(self):
+        """تحضير الكائن للإرسال عبر الشبكة كـ JSON"""
+        return {
+            "id": self.id,
+            "name": self.name,
+            "role": self.role,
+            "gender": self.gender,
+            "color": self.color,
+            "status": self.status
+        }
+
+
+# ==========================================
+# 3. مدير الشبكة (Mesh Manager)
+# ==========================================
+class AgentMeshManager:
+    def __init__(self):
+        self.agents = {}  # مخزن الذاكرة المركزي
+
+    def create_agent(self, name, role, gender, color, agent_id=None):
+        """إنشاء الكائن في الذاكرة وإرساله للواجهة"""
+        new_agent = Agent(name, role, gender, color, agent_id)
+        self.agents[new_agent.id] = new_agent
+        socketio.emit('add_agent', new_agent.to_dict())
+        return new_agent
+
+    def get_agent(self, agent_id):
+        return self.agents.get(str(agent_id))
+
+    def log(self, text, msg_type="info"):
+        """إرسال سجل للوحة الجانبية في الواجهة"""
+        socketio.emit('server_log', {'text': text, 'type': msg_type})
+
+    def connect_visual(self, source_id, target_id, log_msg=None):
+        """رسم خط اتصال بين وكيلين"""
+        socketio.emit('ui_command', {
+            "agent_id": str(source_id),
+            "target_id": str(target_id),
+            "action": "connection"
+        })
+        if log_msg:
+            self.log(log_msg)
+
+    @contextmanager
+    def task(self, agent_id):
+        """مدير سياق (Context Manager) للتحكم التلقائي بحالة الوكيل"""
+        agent = self.get_agent(agent_id)
+        if agent:
+            agent.set_status("working")
+            try:
+                yield agent
+            finally:
+                agent.set_status("sleeping")
+        else:
+            self.log(f"تحذير: الوكيل {agent_id} غير متوفر!", "error")
+            yield None
+
+
+# نسخة عالمية من المدير
+mesh = AgentMeshManager()
+
+
+# ==========================================
+# 4. التوليد الأولي للوكلاء (Initialization)
+# ==========================================
+def initialize_system_agents():
     """
-    Receives JSON commands to control agents.
-    Payload: { "agent_id": str, "action": str, "target_id": str (optional) }
+    هذه الدالة تعمل مرة واحدة فقط عند إقلاع السيرفر.
+    نقوم هنا بتعريف الـ IDs بشكل ثابت لكي لا تتكرر الكائنات.
     """
-    if not request.is_json:
-        return jsonify({
-            "status": "error",
-            "message": "Content-Type must be application/json"
-        }), 400
+    print("[نظام] جاري تهيئة وكلاء الشبكة الأساسيين...")
+    if not mesh.agents:  # التأكد من أن الذاكرة فارغة
+        mesh.create_agent("المنسق MAX", "System Core", "male", "#6366f1", "core_1")
+        mesh.create_agent("المحلل الذكي", "Data Engine", "male", "#10b981", "data_1")
+        mesh.create_agent("الأمن السيبراني", "Security", "female", "#ec4899", "sec_1")
+        mesh.create_agent("I.T", "Security", "female", "#ec4899", "sec_2")
+    print("✅ تم تحميل الوكلاء في الذاكرة بنجاح.")
 
-    data = request.json
-    agent_id = data.get('agent_id')
-    action = data.get('action')
 
-    if not agent_id or not action:
-        return jsonify({"error": "Missing required fields (agent_id, action)"}), 400
-
-    # Update local state if the action is a status change
-    if action in ["thinking", "working", "sleeping"]:
-        agent_states[agent_id] = action
-
-    # Forward the command to the Frontend via WebSocket
-    socketio.emit('ui_command', data)
-
-    print(f"[API] Command Processed: Agent {agent_id} -> {action}")
-    return jsonify({
-        "status": "success",
-        "processed_data": data
-    }), 200
-
-@app.route('/api/status', methods=['GET'])
-def get_status():
-    """Returns the current health status of the server."""
-    return jsonify({"status": "online", "timestamp": time.time(), "agent_states": agent_states}), 200
-
-# =========================================================
-# 2. WebSocket Events (أحداث سوكيت لاتصال الواجهة)
-# =========================================================
-
+# ==========================================
+# 5. نقاط اتصال SocketIO (Endpoints)
+# ==========================================
 @socketio.on('connect')
 def handle_connect():
-    """Fires when a browser client connects."""
-    client_id = request.sid
-    print(f"[Socket] Client Connected: {client_id}")
-    emit('server_log', {
-        'text': 'تم الاتصال بمحرك الأوامر المركزي بنجاح',
-        'type': 'success'
-    })
+    """عند فتح الواجهة (React)، نرسل لها كل الكائنات الموجودة في الذاكرة"""
+    print("--- [شبكة] واجهة جديدة اتصلت ---")
+    current_agents = [a.to_dict() for a in mesh.agents.values()]
+    emit('set_agents', current_agents)  # استخدام set_agents لاستبدال القائمة بالكامل
+    mesh.log("تم مزامنة حالة الذاكرة مع الواجهة", "success")
 
-@socketio.on('disconnect')
-def handle_disconnect():
-    print(f"[Socket] Client Disconnected")
 
-# =========================================================
-# 3. Directed Sequence Logic (منطق الأوامر المتسلسلة المباشرة)
-# =========================================================
+# ==========================================
+# 6. مهام وعمليات الذكاء الاصطناعي (Tasks)
+# ==========================================
+def start_coordinated_process(chat_id):
+    """
+    مهمة متكاملة: تستدعي الوكلاء (ولا تنشئهم) لتنفيذ العمليات.
+    يمكنك تكرار هذه الدالة مئة مرة دون أن يتضاعف الوكلاء.
+    """
+    mesh.log("بدء دورة المعالجة الذكية...", "info")
 
-def send_command(payload):
-    """Helper to send POST requests to the local API."""
     try:
-        response = requests.post(Config.API_URL, json=payload)
-        return response.status_code == 200
+        # استخدام المعرفات الثابتة التي أنشأناها في دالة initialize_system_agents
+        with mesh.task("core_1"):
+            mesh.log("المنسق يقوم بفحص الطلب...")
+            time.sleep(1.5)
+
+            # اتصال بصرى
+            mesh.connect_visual("core_1", "data_1", "توجيه البيانات للمحلل")
+
+            with mesh.task("data_1"):
+                mesh.log("جاري معالجة البيانات وتحليلها...")
+                time.sleep(2.5)
+
+            # اتصال بصرى
+            mesh.connect_visual("data_1", "sec_1", "فحص التشفير والأمان")
+
+            with mesh.task("sec_1"):
+                mesh.log("تأمين المخرجات...")
+                time.sleep(1.5)
+
+            # اتصال بصرى
+            mesh.connect_visual("sec_2", "core_1", "فحص السيرفر")
+
+            with mesh.task("core_1"):
+                mesh.log(" فحص السيرفر تم...")
+                time.sleep(1.5)
+
+        mesh.log("اكتملت جميع العمليات بنجاح", "success")
+        bot.send_message(chat_id, "✅ اكتملت الدورة الذكية بنجاح! راجع لوحة التحكم.")
+
     except Exception as e:
-        print(f"[Logic Error] Failed to send command: {e}")
-        return False
+        mesh.log(f"حدث خطأ في النظام: {str(e)}", "error")
 
-def automated_agent_logic():
-    """
-    Background thread running a direct, fixed sequence of commands.
-    Loops indefinitely with a 2-second interval between each step.
-    """
-    print("[Brain] Starting directed sequence engine...")
-    time.sleep(5)  # Initial wait for server stability
 
-    # تعريف السلسلة المطلوبة بدقة
-    while True:
-        try:
-            # 1. الوكيل الأول يعمل
-            send_command({"agent_id": "1", "action": "working"})
-            time.sleep(2)
+def run_five_seconds_test(chat_id):
+    """مهمة مؤقتة لاختبار وكيل واحد"""
+    agent_id = "core_1"
+    mesh.log(f"بدء اختبار 5 ثواني للوكيل {agent_id}", "info")
 
-            # 2. الوكيل الأول يرسل للوكيل الثاني
-            send_command({"agent_id": "1", "action": "connection", "target_id": "2"})
-            time.sleep(2)
+    with mesh.task(agent_id):
+        time.sleep(5)
 
-            # 3. الوكيل الثاني يفكر
-            send_command({"agent_id": "2", "action": "thinking"})
-            time.sleep(2)
+    mesh.log("انتهى الاختبار وعاد الوكيل للسبات.", "success")
+    bot.send_message(chat_id, "⏱️ انتهى اختبار الـ 5 ثواني.")
 
-            # 4. الوكيل الثاني يعمل
-            send_command({"agent_id": "2", "action": "working"})
-            time.sleep(2)
 
-            # 5. الوكيل الثالث يفكر
-            send_command({"agent_id": "3", "action": "thinking"})
-            time.sleep(2)
+# ==========================================
+# 7. أوامر بوت التيليجرام (Telegram Handlers)
+# ==========================================
+@bot.message_handler(commands=['start'])
+def send_welcome(message):
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.add(types.KeyboardButton('تشغيل الشبكة ⚡'), types.KeyboardButton('اختبار 5 ثواني ⏱️'))
+    bot.reply_to(message, "مرحباً دكتور MAX! نظام AgentMesh جاهز ومستقر.", reply_markup=markup)
 
-            # 6. الوكيل الثاني أنهى العمل (يعود للنوم)
-            send_command({"agent_id": "2", "action": "sleeping"})
-            time.sleep(2)
 
-            # 7. الوكيل الرابع يعمل
-            send_command({"agent_id": "4", "action": "working"})
-            time.sleep(2)
+@bot.message_handler(func=lambda message: message.text == "تشغيل الشبكة ⚡")
+def handle_run(message):
+    bot.send_message(message.chat.id, "🚀 جاري تفعيل الوكلاء وإرسال المهام...")
+    threading.Thread(target=start_coordinated_process, args=(message.chat.id,), daemon=True).start()
 
-            # 8. الوكيل الثالث يعمل
-            send_command({"agent_id": "3", "action": "working"})
-            time.sleep(2)
 
-            # 9. الوكيل الرابع يتصل بالوكيل الثاني
-            send_command({"agent_id": "4", "action": "connection", "target_id": "2"})
-            time.sleep(2)
+@bot.message_handler(func=lambda message: message.text == "اختبار 5 ثواني ⏱️")
+def handle_test(message):
+    bot.send_message(message.chat.id, "⏳ تشغيل اختبار المهمة المؤقتة...")
+    threading.Thread(target=run_five_seconds_test, args=(message.chat.id,), daemon=True).start()
 
-            # 10. الوكيل الثاني يفكر
-            send_command({"agent_id": "2", "action": "thinking"})
-            time.sleep(2)
 
-            # 11. الوكيل الثاني يعمل
-            send_command({"agent_id": "2", "action": "working"})
-            time.sleep(2)
-
-            # 12. الوكيل الثاني أنهى العمل
-            send_command({"agent_id": "2", "action": "sleeping"})
-            time.sleep(2)
-
-            # 13. الوكيل الرابع أنهى العمل
-            send_command({"agent_id": "4", "action": "sleeping"})
-            time.sleep(2)
-
-            # إعادة تعيين الحالات الأخرى قبل بدء اللوب من جديد لضمان الاستمرارية
-            send_command({"agent_id": "1", "action": "sleeping"})
-            send_command({"agent_id": "3", "action": "sleeping"})
-            print("[Brain] Sequence completed. Restarting...")
-            time.sleep(2)
-
-        except Exception as e:
-            print(f"[Critical] Logic Error: {e}")
-            time.sleep(10)
-
-# =========================================================
-# 4. Entry Point (نقطة تشغيل النظام)
-# =========================================================
-
+# ==========================================
+# 8. تشغيل النظام (Main Entry Point)
+# ==========================================
 if __name__ == '__main__':
-    # Start the background logic thread
-    logic_thread = threading.Thread(target=automated_agent_logic, daemon=True)
-    logic_thread.start()
+    # 1. توليد الوكلاء في الذاكرة أولاً (مرة واحدة فقط)
+    initialize_system_agents()
 
-    print("\n" + "="*50)
-    print("  AGENT MESH SERVER - DIRECTED MODE")
-    print(f"  API: http://{Config.HOST}:{Config.PORT}/api/control")
-    print("="*50 + "\n")
+    # 2. تشغيل بوت التيليجرام في الخلفية
+    threading.Thread(target=lambda: bot.infinity_polling(), daemon=True).start()
 
-    # Run the server
-    socketio.run(app, host=Config.HOST, port=Config.PORT, debug=Config.DEBUG, allow_unsafe_werkzeug=True)
+    print("\n🚀 [AgentMesh] السيرفر يعمل على: http://127.0.0.1:5000\n")
+
+    # 3. تشغيل سيرفر الـ SocketIO
+    socketio.run(app, host='127.0.0.1', port=5000, debug=False, use_reloader=False, allow_unsafe_werkzeug=True)
