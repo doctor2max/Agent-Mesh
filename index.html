@@ -1,594 +1,597 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agent Mesh - Pro Testing Environment</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Tajawal:wght@300;400;700;900&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AgentMesh v3.5 </title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Tajawal:wght@400;700;900&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#010208;font-family:'Tajawal',sans-serif;color:#cbd5e1;overflow:hidden;height:100vh}
+#bg{position:fixed;inset:0;z-index:0}
+#root{position:relative;z-index:1;height:100vh;display:flex;flex-direction:column}
+::-webkit-scrollbar{width:2px}
+::-webkit-scrollbar-thumb{background:rgba(56,189,248,0.3);border-radius:10px}
 
-    <style>
-        :root {
-            --c-bg: #03060f;
-            --c-surface: #080f1e;
-            --c-panel: #0b1323;
-            --c-indigo: #6366f1;
-            --c-emerald: #10b981;
-            --c-sky: #0ea5e9;
-            --c-border: rgba(255,255,255,0.06);
-            --c-border-md: rgba(255,255,255,0.10);
-            --c-text-dim: rgba(148,163,184,0.7);
-        }
+.card{position:relative;border-radius:14px;overflow:hidden;height:250px;padding:10px 12px;display:flex;flex-direction:column;align-items:center;gap:4px;animation:cardIn 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards}
+@keyframes cardIn{from{opacity:0;transform:scale(0.85) translateY(10px);filter:blur(3px)}to{opacity:1;transform:scale(1) translateY(0);filter:blur(0)}}
+.cbg{position:absolute;inset:0;border-radius:14px;border:1px solid rgba(56,189,248,0.1);background:linear-gradient(135deg,rgba(56,189,248,0.04),rgba(129,140,248,0.03));transition:border-color 0.5s,background 0.5s}
+.hc{position:absolute;width:10px;height:10px;transition:border-color 0.4s,opacity 0.4s}
+.htl{top:0;right:0;border-top:1.5px solid rgba(56,189,248,0.4);border-right:1.5px solid rgba(56,189,248,0.4);border-radius:0 4px 0 0}
+.htr{top:0;left:0;border-top:1.5px solid rgba(56,189,248,0.4);border-left:1.5px solid rgba(56,189,248,0.4);border-radius:4px 0 0 0}
+.hbl{bottom:0;right:0;border-bottom:1.5px solid rgba(56,189,248,0.4);border-right:1.5px solid rgba(56,189,248,0.4);border-radius:0 0 4px 0}
+.hbr{bottom:0;left:0;border-bottom:1.5px solid rgba(56,189,248,0.4);border-left:1.5px solid rgba(56,189,248,0.4);border-radius:0 0 0 4px}
+.scan{position:absolute;left:0;right:0;top:-2px;height:1.5px;opacity:0;pointer-events:none}
+.pbar{position:absolute;bottom:0;left:0;right:0;height:2px;border-radius:0 0 14px 14px;overflow:hidden}
+.pbf{height:100%;width:0;opacity:0}
+.shimmer{position:absolute;top:0;bottom:0;width:35%;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.04),transparent);animation:shimmer 3s ease-in-out infinite;pointer-events:none}
+@keyframes shimmer{0%{left:-40%}100%{left:140%}}
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+.sw .cbg{background:linear-gradient(135deg,rgba(129,140,248,0.04),rgba(4,8,15,0.6));border-color:rgba(129,140,248,0.1)}
+.sw .hc{opacity:0.28}
 
-        body {
-            background: var(--c-bg);
-            background-image:
-                radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99,102,241,0.12) 0%, transparent 60%),
-                linear-gradient(rgba(99,102,241,0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(99,102,241,0.03) 1px, transparent 1px);
-            background-size: 100% 100%, 60px 60px, 60px 60px;
-            font-family: 'Tajawal', sans-serif;
-            color: #e2e8f0;
-            overflow: hidden;
-            height: 100vh;
-        }
+.sa{animation:cardIn 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards,pulseW 2s ease-in-out 0.5s infinite;transform:translateY(-2px)}
+.sa .cbg{background:linear-gradient(135deg,rgba(52,211,153,0.09),rgba(56,189,248,0.04));border-color:rgba(52,211,153,0.4)}
+.sa .hc{opacity:1;border-color:rgba(52,211,153,0.9)!important;animation:cg 1.2s ease-in-out infinite}
+.sa .scan{opacity:1;background:linear-gradient(90deg,transparent,rgba(52,211,153,0.9),transparent);animation:scanM 2.2s linear infinite}
+.sa .pbf{opacity:1;background:linear-gradient(90deg,rgba(52,211,153,0),rgba(52,211,153,0.9),rgba(56,189,248,0.6));animation:pf 2.5s ease-in-out infinite}
 
-        /* ── Scrollbar ── */
-        ::-webkit-scrollbar { width: 3px; }
-        ::-webkit-scrollbar-thumb { background: #312e81; border-radius: 10px; }
+.sp{animation:cardIn 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards,pulseT 1.6s ease-in-out 0.5s infinite;transform:translateY(-2px)}
+.sp .cbg{background:linear-gradient(135deg,rgba(56,189,248,0.09),rgba(167,139,250,0.06));border-color:rgba(56,189,248,0.45)}
+.sp .hc{opacity:1;border-color:rgba(56,189,248,1)!important;animation:cg 0.9s ease-in-out infinite}
+.sp .scan{opacity:1;background:linear-gradient(90deg,transparent,rgba(56,189,248,0.9),transparent);animation:scanM 1.6s linear infinite}
+.sp .pbf{opacity:1;background:linear-gradient(90deg,rgba(56,189,248,0),rgba(56,189,248,0.9),rgba(167,139,250,0.7));animation:pf 1.8s ease-in-out infinite}
 
-        /* ── Card States ── */
-        .agent-card {
-            background: var(--c-surface);
-            border: 1px solid var(--c-border);
-            border-radius: 18px;
-            transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-            position: relative;
-            overflow: hidden;
-        }
-        .agent-card::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            border-radius: 18px;
-            opacity: 0;
-            transition: opacity 0.6s ease;
-            pointer-events: none;
-        }
-        .state-sleeping::before { background: radial-gradient(circle at 50% 0%, rgba(99,102,241,0.06) 0%, transparent 70%); opacity: 1; }
-        .state-working {
-            border-color: rgba(16,185,129,0.5);
-            background: rgba(16,185,129,0.05);
-        }
-        .state-working::before { background: radial-gradient(circle at 50% 0%, rgba(16,185,129,0.15) 0%, transparent 70%); opacity: 1; }
-        .state-thinking {
-            border-color: rgba(14,165,233,0.5);
-            background: rgba(14,165,233,0.05);
-        }
-        .state-thinking::before { background: radial-gradient(circle at 50% 0%, rgba(14,165,233,0.15) 0%, transparent 70%); opacity: 1; }
+.sf{animation:cardIn 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards,pulseF 1.2s ease-in-out 0.5s infinite;transform:translateY(-2px)}
+.sf .cbg{background:linear-gradient(135deg,rgba(239,68,68,0.09),rgba(248,113,113,0.05));border-color:rgba(239,68,68,0.45)}
+.sf .hc{opacity:1;border-color:rgba(239,68,68,1)!important;animation:cgRed 0.7s ease-in-out infinite}
+.sf .scan{opacity:1;background:linear-gradient(90deg,transparent,rgba(239,68,68,0.8),transparent);animation:scanM 1.4s linear infinite}
+.sf .pbf{opacity:0}
+.sf .shimmer{background:linear-gradient(90deg,transparent,rgba(239,68,68,0.08),transparent);animation:shimmer 2.5s ease-in-out infinite}
 
-        /* ── Corner glow dots ── */
-        .agent-card .corner-dot {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            width: 5px;
-            height: 5px;
-            border-radius: 50%;
-            background: var(--c-border-md);
-            transition: all 0.4s ease;
-        }
-        .state-working .corner-dot { background: var(--c-emerald); box-shadow: 0 0 8px var(--c-emerald); animation: pulseDot 1.2s ease-in-out infinite; }
-        .state-thinking .corner-dot { background: var(--c-sky); box-shadow: 0 0 8px var(--c-sky); animation: pulseDot 0.8s ease-in-out infinite; }
+@keyframes pulseF{0%,100%{box-shadow:0 0 15px rgba(239,68,68,.1)}50%{box-shadow:0 0 35px rgba(239,68,68,.25)}}
+@keyframes cgRed{0%,100%{opacity:.5}50%{opacity:1;filter:brightness(1.8) saturate(1.5)}}
 
-        /* ── Scan Line ── */
-        .scan-line {
-            position: absolute;
-            left: 0; right: 0;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(99,102,241,0.6), transparent);
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-        .state-working .scan-line { background: linear-gradient(90deg, transparent, rgba(16,185,129,0.7), transparent); opacity: 1; animation: scanMove 2s linear infinite; }
-        .state-thinking .scan-line { background: linear-gradient(90deg, transparent, rgba(14,165,233,0.7), transparent); opacity: 1; animation: scanMove 1.4s linear infinite; }
+.card::after{content:'';position:absolute;inset:-1px;border-radius:15px;pointer-events:none;border:1px solid transparent}
+.sa::after{border-color:rgba(52,211,153,0.15);animation:halo 2s ease-out infinite}
+.sp::after{border-color:rgba(56,189,248,0.15);animation:halo 1.5s ease-out infinite}
+.sf::after{border-color:rgba(239,68,68,0.2);animation:haloRed 1s ease-out infinite}
+@keyframes haloRed{0%{opacity:.8;transform:scale(1)}100%{opacity:0;transform:scale(1.08);border-color:rgba(239,68,68,0)}}
 
-        /* ── Progress Bar ── */
-        .progress-bar {
-            position: absolute;
-            bottom: 0; left: 0;
-            height: 2px;
-            width: 0%;
-            border-radius: 0 0 18px 18px;
-            opacity: 0;
-            transition: opacity 0.4s;
-        }
-        .state-working .progress-bar { background: linear-gradient(90deg, transparent, var(--c-emerald)); opacity: 1; animation: progressFill 3s ease-in-out infinite; }
-        .state-thinking .progress-bar { background: linear-gradient(90deg, transparent, var(--c-sky)); opacity: 1; animation: progressFill 2s ease-in-out infinite; }
+.avw{transition:transform 0.4s}
+.sw .avw{animation:fl 4.5s ease-in-out infinite}
+.sa .avw{animation:wb 1s ease-in-out infinite alternate}
+.sp .avw{animation:ts 2s ease-in-out infinite}
+.sf .avw{animation:shake 0.4s ease-in-out infinite}
 
-        /* ── Avatar SVG ── */
-        .avatar-wrap {
-            transition: transform 0.5s cubic-bezier(0.34,1.56,0.64,1);
-        }
-        .state-working .avatar-wrap { animation: workBounce 0.8s ease-in-out infinite alternate; }
-        .state-thinking .avatar-wrap { animation: thinkSway 1.5s ease-in-out infinite; }
-        .state-sleeping .avatar-wrap { animation: floatSlow 4s ease-in-out infinite; }
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-2px) rotate(-0.5deg)}75%{transform:translateX(2px) rotate(0.5deg)}}
 
-        /* ── Particles ── */
-        .particle {
-            position: absolute;
-            border-radius: 50%;
-            pointer-events: none;
-            opacity: 0;
-        }
-        .state-working .particle { background: var(--c-emerald); animation: particleFly 1.5s ease-out infinite; }
-        .state-thinking .particle { background: var(--c-sky); animation: particleFly 2s ease-out infinite; }
-        .p1 { width: 3px; height: 3px; bottom: 30%; left: 20%; animation-delay: 0s !important; }
-        .p2 { width: 2px; height: 2px; bottom: 25%; left: 50%; animation-delay: 0.5s !important; }
-        .p3 { width: 3px; height: 3px; bottom: 35%; left: 75%; animation-delay: 1s !important; }
+.zzz{position:absolute;inset:0;pointer-events:none;z-index:15}
+.zzz span{position:absolute;font-family:'Space Mono',monospace;font-weight:900;opacity:0;color:rgba(167,139,250,1);text-shadow:0 0 12px rgba(167,139,250,0.9),0 0 25px #a78bfa;font-size:18px;letter-spacing:2px}
+.zzz span:nth-child(1){bottom:55%;right:15%;animation:zfBig 2.8s 0s infinite}
+.zzz span:nth-child(2){bottom:62%;right:25%;font-size:14px;animation:zfBig 2.8s 0.9s infinite}
+.zzz span:nth-child(3){bottom:70%;right:32%;font-size:10px;animation:zfBig 2.8s 1.8s infinite}
+@keyframes zfBig{0%{transform:translate(0,0) scale(0.3);opacity:0;filter:blur(2px)}20%{opacity:1;filter:blur(0)}80%{opacity:0.8}100%{transform:translate(-18px,-48px) scale(1.3);opacity:0;filter:blur(1px)}}
 
-        /* ── ZZZ ── */
-        .zzz-wrap span {
-            position: absolute;
-            font-family: 'Space Mono', monospace;
-            font-weight: 700;
-            color: #6366f1;
-            opacity: 0;
-        }
-        .zzz-wrap span:nth-child(1) { font-size: 9px; bottom: 55%; right: 15%; animation: zzzFloat 2.5s 0s infinite; }
-        .zzz-wrap span:nth-child(2) { font-size: 7px; bottom: 62%; right: 22%; animation: zzzFloat 2.5s 0.8s infinite; }
-        .zzz-wrap span:nth-child(3) { font-size: 6px; bottom: 68%; right: 28%; animation: zzzFloat 2.5s 1.6s infinite; }
+.td{width:3px;height:3px;border-radius:50%;display:inline-block;margin:0 2px;opacity:0}
+.sa .td{animation:tp 0.9s ease-in-out infinite}
+.sp .td{animation:tp 1.4s ease-in-out infinite}
+.sf .td{animation:tp 0.8s ease-in-out infinite;background:#ef4444!important;box-shadow:0 0 5px #ef4444!important}
+.td:nth-child(2){animation-delay:0.22s!important}
+.td:nth-child(3){animation-delay:0.44s!important}
 
-        /* ── Thinking Dots ── */
-        .think-dot {
-            width: 4px; height: 4px;
-            background: var(--c-sky);
-            border-radius: 50%;
-            display: inline-block;
-            margin: 0 2px;
-            opacity: 0;
-        }
-        .state-thinking .think-dot { animation: thinkBlink 1.2s ease-in-out infinite; }
-        .think-dot:nth-child(2) { animation-delay: 0.2s !important; }
-        .think-dot:nth-child(3) { animation-delay: 0.4s !important; }
+.waitDots .td{animation-duration:2.4s!important;background:#f59e0b!important;box-shadow:0 0 5px #f59e0b!important}
 
-        /* ── Connection Line ── */
-        .conn-line { filter: drop-shadow(0 0 4px rgba(99,102,241,0.6)); }
+.si{display:inline-block}
+.sa .si{animation:spin 3s linear infinite}
+.sp .si{animation:spin 2s linear infinite}
+.sf .si{animation:spin 1.2s linear infinite;opacity:0.7;stroke:#ef4444!important}
 
-        /* ── Header ── */
-        .header-logo {
-            font-family: 'Space Mono', monospace;
-            letter-spacing: -1px;
-        }
+.logp{background:rgba(1,3,9,0.96);border:1px solid rgba(56,189,248,0.18);border-radius:12px;position:relative;overflow:hidden;width:320px;flex-shrink:0;display:flex;flex-direction:column;z-index:20}
+.logp::before{content:'';position:absolute;top:0;left:0;right:0;height:1.5px;background:linear-gradient(90deg,transparent,rgba(56,189,248,0.7),rgba(129,140,248,0.5),transparent)}
+.logp::after{content:'';position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(56,189,248,0.012) 3px,rgba(56,189,248,0.012) 4px)}
+.lhdr{display:flex;align-items:center;gap:8px;padding:13px 16px 11px;border-bottom:1px solid rgba(56,189,248,0.12);background:rgba(56,189,248,0.03);position:relative;z-index:1}
+.lhd{width:6px;height:6px;border-radius:50%;background:#22d3ee;box-shadow:0 0 8px #22d3ee,0 0 16px rgba(34,211,238,0.4);animation:tp 2s ease-in-out infinite;flex-shrink:0}
+.ltitle{font-family:'Space Mono',monospace;font-size:9px;font-weight:700;color:rgba(56,189,248,0.85);text-transform:uppercase;letter-spacing:0.2em;flex:1}
+.lcnt{font-family:'Space Mono',monospace;font-size:9px;font-weight:700;color:rgba(56,189,248,0.6);background:rgba(56,189,248,0.1);border:1px solid rgba(56,189,248,0.2);border-radius:4px;padding:2px 7px}
+.lbody{flex:1;overflow-y:auto;position:relative;z-index:1}
+.li{display:flex;flex-direction:column;gap:3px;padding:9px 14px 9px 12px;border-bottom:1px solid rgba(255,255,255,0.04);position:relative;animation:lin 0.22s cubic-bezier(0.34,1.56,0.64,1);transition:background 0.15s}
+.li:hover{background:rgba(255,255,255,0.025)}
+.li::before{content:'';position:absolute;top:4px;bottom:4px;right:0;width:3px;border-radius:3px 0 0 3px}
+.li.ti::before{background:rgba(129,140,248,0.7);box-shadow:0 0 6px rgba(129,140,248,0.5)}
+.li.ts{background:rgba(52,211,153,0.035)}.li.ts::before{background:#34d399;box-shadow:0 0 8px rgba(52,211,153,0.8)}
+.li.te{background:rgba(248,113,113,0.04)}.li.te::before{background:#f87171;box-shadow:0 0 8px rgba(248,113,113,0.8)}
+.ltime{font-family:'Space Mono',monospace;font-size:9px;color:rgba(56,189,248,0.42);letter-spacing:0.05em}
+.ltxt{font-size:12px;line-height:1.6;font-weight:500;word-break:break-word}
+.ltxt.ti{color:#dde4ff}.ltxt.ts{color:#6effd4;text-shadow:0 0 10px rgba(110,255,212,0.2)}.ltxt.te{color:#ffb3b3;text-shadow:0 0 10px rgba(255,179,179,0.2)}
+.empt{padding:24px;text-align:center;font-family:'Space Mono',monospace;font-size:9px;color:rgba(56,189,248,0.2);letter-spacing:0.1em}
 
-        /* ── Log Item ── */
-        .log-item {
-            animation: logSlide 0.3s cubic-bezier(0.34,1.56,0.64,1);
-        }
+.sparks{position:absolute;inset:0;pointer-events:none;z-index:14;overflow:hidden}
+.sparks span{position:absolute;width:2px;height:2px;background:#ef4444;border-radius:50%;opacity:0;animation:sparkle 1.8s ease-out infinite}
+.sparks span:nth-child(1){top:40%;right:30%;animation-delay:0s}
+.sparks span:nth-child(2){top:35%;right:25%;animation-delay:0.4s}
+.sparks span:nth-child(3){top:45%;right:35%;animation-delay:0.8s}
+.sparks span:nth-child(4){top:38%;right:20%;animation-delay:1.2s}
+@keyframes sparkle{0%{opacity:0;transform:translate(0,0) scale(0)}20%{opacity:1}80%{opacity:0.8;transform:translate(-10px,-15px) scale(1.5)}100%{opacity:0;transform:translate(-20px,-30px) scale(0)}}
 
-        /* ── Status Pill ── */
-        .status-pill {
-            font-family: 'Space Mono', monospace;
-            letter-spacing: 0.05em;
-        }
-
-        /* ── Keyframes ── */
-        @keyframes scanMove {
-            0% { top: -2px; }
-            100% { top: calc(100% + 2px); }
-        }
-        @keyframes progressFill {
-            0% { width: 0%; opacity: 0.6; }
-            60% { width: 85%; opacity: 1; }
-            100% { width: 100%; opacity: 0.3; }
-        }
-        @keyframes pulseDot {
-            0%, 100% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.6); opacity: 0.5; }
-        }
-        @keyframes workBounce {
-            0% { transform: translateY(0) scale(1); }
-            100% { transform: translateY(-4px) scale(1.03); }
-        }
-        @keyframes thinkSway {
-            0%, 100% { transform: rotate(-2deg); }
-            50% { transform: rotate(2deg); }
-        }
-        @keyframes floatSlow {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-6px); }
-        }
-        @keyframes particleFly {
-            0% { transform: translateY(0) scale(1); opacity: 0.8; }
-            100% { transform: translateY(-40px) scale(0); opacity: 0; }
-        }
-        @keyframes zzzFloat {
-            0% { transform: translate(0,0) scale(0.5); opacity: 0; }
-            30% { opacity: 0.8; }
-            100% { transform: translate(-15px,-30px) scale(1); opacity: 0; }
-        }
-        @keyframes thinkBlink {
-            0%, 100% { opacity: 0.2; transform: scale(0.8); }
-            50% { opacity: 1; transform: scale(1.2); }
-        }
-        @keyframes logSlide {
-            0% { transform: translateY(-8px); opacity: 0; }
-            100% { transform: translateY(0); opacity: 1; }
-        }
-        @keyframes dashFlow { to { stroke-dashoffset: -100; } }
-        @keyframes onlinePulse {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(16,185,129,0.4); }
-            50% { box-shadow: 0 0 0 5px rgba(16,185,129,0); }
-        }
-        @keyframes cardEntry {
-            0% { opacity: 0; transform: scale(0.85) translateY(10px); }
-            100% { opacity: 1; transform: scale(1) translateY(0); }
-        }
-        .card-enter { animation: cardEntry 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards; }
-    </style>
+@keyframes mouthBreath{0%,100% { ry: 3; } 50% { ry: 1.2; }}
+@keyframes bubbleFloat{0%{transform:translate(0,0) scale(0.5);opacity:0.8}100%{transform:translate(-4px,-18px) scale(1.2);opacity:0}}
+@keyframes breathe{0%{transform:scale(1)}100%{transform:scale(1.02) translateY(-1px)}}
+@keyframes scanM{0%{top:-2px;opacity:0}8%{opacity:1}92%{opacity:.8}100%{top:calc(100% + 2px);opacity:0}}
+@keyframes pf{0%{width:0;opacity:0}20%{opacity:1}70%{width:80%;opacity:1}100%{width:100%;opacity:0}}
+@keyframes halo{0%{opacity:.6;transform:scale(1)}100%{opacity:0;transform:scale(1.08)}}
+@keyframes cg{0%,100%{opacity:.5}50%{opacity:1;filter:brightness(1.6)}}
+@keyframes pulseW{0%,100%{box-shadow:0 0 15px rgba(52,211,153,.06)}50%{box-shadow:0 0 35px rgba(52,211,153,.2)}}
+@keyframes pulseT{0%,100%{box-shadow:0 0 15px rgba(56,189,248,.06)}50%{box-shadow:0 0 35px rgba(56,189,248,.22)}}
+@keyframes fl{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+@keyframes wb{0%{transform:translateY(0) rotate(-1deg)}100%{transform:translateY(-3px) rotate(1deg)}}
+@keyframes ts{0%,100%{transform:rotate(-1.5deg)}50%{transform:rotate(1.5deg) translateY(-2px)}}
+@keyframes tp{0%,100%{opacity:.1;transform:scale(.6)}50%{opacity:1;transform:scale(1.3)}}
+@keyframes op{0%,100%{box-shadow:0 0 0 0 rgba(52,211,153,.6)}50%{box-shadow:0 0 0 5px rgba(52,211,153,0)}}
+@keyframes dashFlow{to{stroke-dashoffset:-100}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes codeUp{0%{transform:translateY(0);opacity:0}10%{opacity:1}85%{opacity:0.7}100%{transform:translateY(-52px);opacity:0}}
+@keyframes keyDown{0%,100%{transform:translateY(0);opacity:0.5}50%{transform:translateY(1px);opacity:1}}
+</style>
 </head>
-<body class="h-screen overflow-hidden">
-    <div id="root" class="h-full"></div>
+<body>
+<canvas id="bg"></canvas>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useEffect,useRef,useCallback}=React;
 
-    <script type="text/babel">
-        const { useState, useEffect, useRef, useCallback } = React;
+const CodeParticle=({i,ac})=>{
+  const snips=['{  }','();','[ ]','//!','</>','fn()','&&','=> ','++i','==='];
+  const xs=[10,22,34,56,68,80,16,44,62,28];
+  return(
+    <span style={{position:'absolute',bottom:'66px',left:`${xs[i%xs.length]}%`,
+      fontSize:'6.5px',fontFamily:'Space Mono,monospace',color:ac,opacity:0,fontWeight:700,
+      textShadow:`0 0 8px ${ac}`,animation:`codeUp 2s ${i*0.28}s ease-out infinite`,
+      pointerEvents:'none',zIndex:8,whiteSpace:'nowrap'}}>
+      {snips[i%snips.length]}
+    </span>
+  );
+};
 
-        const AgentAvatar = ({ color, gender, status }) => {
-            const isSleeping = status === 'sleeping';
-            const isWorking = status === 'working';
-            const isThinking = status === 'thinking';
-            return (
-                <div className="avatar-wrap" style={{display:'flex',alignItems:'center',justifyContent:'center'}}>
-                    <svg width="72" height="72" viewBox="0 0 50 50">
-                        {gender === 'female' && (
-                            <path d="M10 25 Q10 5 25 5 Q40 5 40 25 L42 32 L8 32 Z" fill="#1e1b4b" />
-                        )}
-                        <rect x="12" y="30" width="26" height="15" rx="6" fill={color} />
-                        <rect x="10" y="42" width="30" height="6" rx="1.5" fill="#05080f" />
-                        {(isWorking || isThinking) && (
-                            <rect x="12" y="43" width="26" height="4" rx="1"
-                                fill={isWorking ? '#10b981' : '#0ea5e9'}
-                                style={{animation: 'pulseDot 1s ease-in-out infinite'}} />
-                        )}
-                        <rect x="16" y="10" width="18" height="18" rx="8" fill="#ffe0b0" />
-                        <g>
-                            {isSleeping ? (
-                                <g>
-                                    <path d="M19 19 Q21 17 23 19" stroke="#2d1b14" strokeWidth="1.2" fill="none" strokeLinecap="round" />
-                                    <path d="M27 19 Q29 17 31 19" stroke="#2d1b14" strokeWidth="1.2" fill="none" strokeLinecap="round" />
-                                </g>
-                            ) : (
-                                <g>
-                                    <circle cx="21" cy="20" r="2" fill="#2d1b14" />
-                                    <circle cx="29" cy="20" r="2" fill="#2d1b14" />
-                                    {isThinking && (
-                                        <g>
-                                            <circle cx="21" cy="20" r="0.8" fill="white" opacity="0.7" />
-                                            <circle cx="29" cy="20" r="0.8" fill="white" opacity="0.7" />
-                                        </g>
-                                    )}
-                                </g>
-                            )}
-                        </g>
-                        {isWorking && (
-                            <g>
-                                <path d="M13 33 L37 33" stroke="#10b981" strokeWidth="0.8" opacity="0.4" />
-                            </g>
-                        )}
-                    </svg>
-                </div>
+/* ChibiChar مع إصلاح الشعر في حالة الفشل */
+const ChibiChar=({color,gender,status})=>{
+  const isWork=status==='working', isThink=status==='thinking', isSleep=status==='sleeping', isFail=status==='failed';
+  const ac=isWork?'#34d399':isThink?'#38bdf8':isFail?'#ef4444':'#818cf8';
+  const sk='#fdd9a0';
+  const skL='#ffe8c0';
+  const ck='rgba(255,130,100,0.32)';
+  const hMap={'#6366f1':'#251860','#8b5cf6':'#311860','#06b6d4':'#0b3050','#10b981':'#0a3020',
+               '#f59e0b':'#5a3000','#ef4444':'#500a0a','#ec4899':'#4a0830','#3b82f6':'#0a2060',
+               '#a855f7':'#2d1058','#14b8a6':'#0a3030'};
+  const h=hMap[color]||'#181040';
+
+  // شعر أنثى متضرر مع الحفاظ على الطول
+  const DamagedFemaleHair = () => (
+    <>
+      <path d="M20 10 Q8 28 10 52 Q11 66 18 74 Q24 80 28 76 Q26 64 23 50 Q20 36 22 20 Z" fill={h} opacity="0.55" strokeDasharray="2 3"/>
+      <path d="M70 10 Q82 28 80 52 Q79 66 72 74 Q66 80 62 76 Q64 64 67 50 Q70 36 68 20 Z" fill={h} opacity="0.55" strokeDasharray="2 3"/>
+      <path d="M26 14 Q16 32 17 48 Q18 58 22 66" fill="none" stroke={h} strokeWidth="3" strokeLinecap="round" opacity="0.5" strokeDasharray="3 2"/>
+      <path d="M64 14 Q74 32 73 48 Q72 58 68 66" fill="none" stroke={h} strokeWidth="3" strokeLinecap="round" opacity="0.5" strokeDasharray="3 2"/>
+      <path d="M45 2 Q55 8 58 20 Q60 32 55 42 Q50 50 48 55" fill="none" stroke={h} strokeWidth="4.5" strokeLinecap="round" opacity="0.65" strokeDasharray="4 3"/>
+      <path d="M45 2 Q40 10 38 22 Q36 34 40 44" fill="none" stroke={h} strokeWidth="4.5" strokeLinecap="round" opacity="0.65" strokeDasharray="4 3"/>
+      <ellipse cx="45" cy="14" rx="27" ry="23" fill={h} opacity="0.75"/>
+      <ellipse cx="45" cy="16" rx="25" ry="19" fill={h} opacity="0.7"/>
+      <path d="M22 14 Q19 8 24 5 Q28 10 26 15 Z" fill={h} opacity="0.6"/>
+      <path d="M28 10 Q25 4 30 2 Q34 7 32 12 Z" fill={h} opacity="0.6"/>
+      <path d="M38 6 Q42 1 47 4 Q44 9 41 8 Z" fill={h} opacity="0.6"/>
+      <path d="M52 5 Q58 1 62 5 Q59 10 55 9 Z" fill={h} opacity="0.6"/>
+      <path d="M64 10 Q70 5 72 11 Q68 15 65 14 Z" fill={h} opacity="0.6"/>
+      <path d="M26 18 Q20 24 21 32 Q23 36 27 34 Q26 28 29 22 Z" fill={h} opacity="0.65" strokeDasharray="2 2"/>
+      <path d="M64 18 Q70 24 69 32 Q67 36 63 34 Q64 28 61 22 Z" fill={h} opacity="0.65" strokeDasharray="2 2"/>
+    </>
+  );
+
+  // شعر ذكر متضرر مع الحفاظ على القصر
+  const DamagedMaleHair = () => (
+    <>
+      <ellipse cx="45" cy="14" rx="25" ry="21" fill={h} opacity="0.75"/>
+      <ellipse cx="45" cy="16" rx="23" ry="17" fill={h} opacity="0.7"/>
+      <path d="M22 14 Q19 8 24 5 Q28 10 26 15 Z" fill={h} opacity="0.6"/>
+      <path d="M28 10 Q25 4 30 2 Q34 7 32 12 Z" fill={h} opacity="0.6"/>
+      <path d="M38 6 Q42 1 47 4 Q44 9 41 8 Z" fill={h} opacity="0.6"/>
+      <path d="M52 5 Q58 1 62 5 Q59 10 55 9 Z" fill={h} opacity="0.6"/>
+      <path d="M64 10 Q70 5 72 11 Q68 15 65 14 Z" fill={h} opacity="0.6"/>
+      <path d="M28 16 L32 24" stroke={h} strokeWidth="1.8" opacity="0.5" strokeDasharray="2 2"/>
+      <path d="M60 14 L56 24" stroke={h} strokeWidth="1.8" opacity="0.5" strokeDasharray="2 2"/>
+    </>
+  );
+
+  const Head=({yOff=0, isSleeping=false, isFailed=false, tilt=0})=>(
+    <g transform={`translate(0,${yOff}) rotate(${tilt},45,22)`}>
+      {isFailed ? (
+        gender==='female' ? <DamagedFemaleHair /> : <DamagedMaleHair />
+      ) : (
+        <>
+          {gender==='female' && (
+            <>
+              <path d="M20 10 Q8 28 10 52 Q11 66 18 74 Q24 80 28 76 Q26 64 23 50 Q20 36 22 20 Z" fill={h} opacity="0.95"/>
+              <path d="M70 10 Q82 28 80 52 Q79 66 72 74 Q66 80 62 76 Q64 64 67 50 Q70 36 68 20 Z" fill={h} opacity="0.95"/>
+              <path d="M26 14 Q16 32 17 48 Q18 58 22 66" fill="none" stroke={h} strokeWidth="3.5" strokeLinecap="round" opacity="0.7"/>
+              <path d="M64 14 Q74 32 73 48 Q72 58 68 66" fill="none" stroke={h} strokeWidth="3.5" strokeLinecap="round" opacity="0.7"/>
+              <path d="M45 2 Q55 8 58 20 Q60 32 55 42 Q50 50 48 55" fill="none" stroke={h} strokeWidth="5" strokeLinecap="round" opacity="0.85"/>
+              <path d="M45 2 Q40 10 38 22 Q36 34 40 44" fill="none" stroke={h} strokeWidth="4" strokeLinecap="round" opacity="0.8"/>
+            </>
+          )}
+          <ellipse cx="45" cy="14" rx={gender==='female'?28:26} ry={gender==='female'?24:22} fill={h}/>
+          <ellipse cx="45" cy="16" rx={gender==='female'?26:24} ry={gender==='female'?20:18} fill={h} opacity="0.95"/>
+          <path d="M22 14 Q19 8 24 5 Q28 10 26 15 Z" fill={h}/>
+          <path d="M28 10 Q25 4 30 2 Q34 7 32 12 Z" fill={h}/>
+          <path d="M38 6 Q42 1 47 4 Q44 9 41 8 Z" fill={h}/>
+          {gender==='female' && (
+            <>
+              <path d="M52 5 Q58 1 62 5 Q59 10 55 9 Z" fill={h}/>
+              <path d="M64 10 Q70 5 72 11 Q68 15 65 14 Z" fill={h}/>
+              <path d="M26 18 Q20 24 21 32 Q23 36 27 34 Q26 28 29 22 Z" fill={h} opacity="0.9"/>
+              <path d="M64 18 Q70 24 69 32 Q67 36 63 34 Q64 28 61 22 Z" fill={h} opacity="0.9"/>
+            </>
+          )}
+        </>
+      )}
+
+      <ellipse cx="45" cy="22" rx="19" ry="18" fill={skL}/>
+      <ellipse cx="45" cy="28" rx="18" ry="12" fill={sk} opacity="0.3"/>
+
+      <ellipse cx="26" cy="24" rx="4.5" ry="5.5" fill={sk}/>
+      <ellipse cx="64" cy="24" rx="4.5" ry="5.5" fill={sk}/>
+      <ellipse cx="26" cy="24" rx="2.5" ry="3.2" fill="rgba(255,160,120,0.3)"/>
+      <ellipse cx="64" cy="24" rx="2.5" ry="3.2" fill="rgba(255,160,120,0.3)"/>
+
+      {!isFailed ? (
+        <>
+          <ellipse cx="32" cy="28" rx="5" ry="3.5" fill={ck}/>
+          <ellipse cx="58" cy="28" rx="5" ry="3.5" fill={ck}/>
+        </>
+      ) : (
+        <>
+          <ellipse cx="32" cy="28" rx="5" ry="3.5" fill="rgba(200,100,100,0.4)"/>
+          <ellipse cx="58" cy="28" rx="5" ry="3.5" fill="rgba(200,100,100,0.4)"/>
+        </>
+      )}
+
+      {isFailed ? (
+        <>
+          <text x="32" y="25" fontSize="12" fontWeight="bold" fill="#500" textAnchor="middle" opacity="0.8">✕</text>
+          <text x="58" y="25" fontSize="12" fontWeight="bold" fill="#500" textAnchor="middle" opacity="0.8">✕</text>
+          <path d="M30 29 Q32 35 34 29" stroke="#a0d0ff" strokeWidth="1" fill="none" opacity="0.7" strokeLinecap="round"/>
+          <path d="M56 29 Q58 35 60 29" stroke="#a0d0ff" strokeWidth="1" fill="none" opacity="0.7" strokeLinecap="round"/>
+          <path d="M40 31 Q45 34 50 31" stroke="#805040" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
+        </>
+      ) : !isSleeping ? (
+        <>
+          <ellipse cx="38" cy="22" rx="5.5" ry="6" fill="white"/>
+          <ellipse cx="52" cy="22" rx="5.5" ry="6" fill="white"/>
+          <ellipse cx="38.5" cy="24" rx="4" ry="4.5" fill="#1a3320"/>
+          <ellipse cx="52.5" cy="24" rx="4" ry="4.5" fill="#1a3320"/>
+          <circle cx="37" cy="22" r="1.6" fill="white" opacity="0.95"/>
+          <circle cx="51" cy="22" r="1.6" fill="white" opacity="0.95"/>
+          <circle cx="40" cy="25.5" r="0.7" fill="white" opacity="0.5"/>
+          <circle cx="54" cy="25.5" r="0.7" fill="white" opacity="0.5"/>
+          <path d="M38 30 Q45 35 52 30" stroke="#c07040" strokeWidth="1.8" fill="none" strokeLinecap="round"/>
+          <path d="M40 30 Q45 34 50 30" fill="#ffaa80" opacity="0.3"/>
+        </>
+      ) : (
+        <>
+          <path d="M32 22 Q38 18 43 22" stroke="#7a4a20" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
+          <path d="M47 22 Q52 18 60 22" stroke="#7a4a20" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
+          <line x1="33" y1="21.5" x2="31" y2="19" stroke="#7a4a20" strokeWidth="1.3" strokeLinecap="round"/>
+          <line x1="39" y1="19.5" x2="39" y2="17" stroke="#7a4a20" strokeWidth="1.3" strokeLinecap="round"/>
+          <line x1="43" y1="21.5" x2="45" y2="19" stroke="#7a4a20" strokeWidth="1.3" strokeLinecap="round"/>
+          <line x1="48" y1="21.5" x2="46" y2="19" stroke="#7a4a20" strokeWidth="1.3" strokeLinecap="round"/>
+          <line x1="53" y1="19.5" x2="53" y2="17" stroke="#7a4a20" strokeWidth="1.3" strokeLinecap="round"/>
+          <line x1="59" y1="21.5" x2="61" y2="19" stroke="#7a4a20" strokeWidth="1.3" strokeLinecap="round"/>
+          <g>
+            <ellipse cx="45" cy="30" rx="3.5" ry="3" fill="#ffaa80" stroke="#c07040" strokeWidth="1.2"
+                     style={{animation: 'mouthBreath 2.2s ease-in-out infinite'}}/>
+            <ellipse cx="45" cy="30" rx="2" ry="1.5" fill="#7a2e00" opacity="0.4"
+                     style={{animation: 'mouthBreath 2.2s ease-in-out infinite'}}/>
+            <circle cx="48" cy="28" r="1.5" fill="rgba(200,230,255,0.8)" stroke="#a0c0e0" strokeWidth="0.3"
+                    style={{animation: 'bubbleFloat 2.2s ease-in-out infinite'}}/>
+          </g>
+        </>
+      )}
+    </g>
+  );
+
+  if(isWork) return(
+    <svg width="100" height="100" viewBox="0 0 100 100" style={{overflow:'visible',display:'block'}}>
+      <ellipse cx="50" cy="98" rx="32" ry="4" fill="rgba(52,211,153,0.15)"/>
+      <rect x="34" y="44" width="22" height="24" rx="9" fill={color} opacity="0.95"/>
+      <path d="M42 44 Q45 50 48 44" fill="white" opacity="0.2"/>
+      <path d="M56 50 Q68 56 68 72" stroke={color} strokeWidth="6.5" fill="none" strokeLinecap="round"/>
+      <ellipse cx="68" cy="74" rx="5" ry="3.5" fill={sk} style={{animation:'keyDown 0.45s 0.1s ease-in-out infinite'}}/>
+      <path d="M34 50 Q22 56 22 72" stroke={color} strokeWidth="6.5" fill="none" strokeLinecap="round"/>
+      <ellipse cx="22" cy="74" rx="5" ry="3.5" fill={sk} style={{animation:'keyDown 0.45s 0.3s ease-in-out infinite'}}/>
+      <rect x="20" y="60" width="50" height="26" rx="3" fill="#071020" stroke={ac} strokeWidth="1.2"/>
+      <rect x="22" y="62" width="46" height="20" rx="2" fill="#050e1a"/>
+      <rect x="24" y="64" width="28" height="2" rx="1" fill="#34d399" opacity="0.95"/>
+      <rect x="24" y="68" width="20" height="2" rx="1" fill="#818cf8" opacity="0.9"/>
+      <rect x="24" y="72" width="36" height="2" rx="1" fill="#38bdf8" opacity="0.9"/>
+      <rect x="24" y="76" width="14" height="2" rx="1" fill="#34d399" opacity="0.8"/>
+      <rect x="62" y="68" width="2" height="6" rx="0.8" fill="#34d399" style={{animation:'tp 0.7s ease-in-out infinite'}}/>
+      <rect x="22" y="88" width="46" height="10" rx="2" fill="#0d1f35" stroke={ac} strokeWidth="0.8"/>
+      {[0,1,2,3,4,5,6,7,8,9].map(k=>(
+        <rect key={'k1'+k} x={23.5+k*4.2} y={89} width="3.5" height="2.5" rx="0.6"
+          fill={k===2||k===6?ac:'#1a3a55'} stroke={ac} strokeWidth="0.4" opacity="0.8"
+          style={{animation:`keyDown 0.5s ${k*0.06}s ease-in-out infinite`}}/>
+      ))}
+      {[0,1,2,3,4,5,6,7].map(k=>(
+        <rect key={'k2'+k} x={24+k*4.5} y={93} width="3.5" height="2.5" rx="0.6"
+          fill={k===3||k===5?ac:'#1a3a55'} stroke={ac} strokeWidth="0.4" opacity="0.7"
+          style={{animation:`keyDown 0.5s ${k*0.08+0.2}s ease-in-out infinite`}}/>
+      ))}
+      <rect x="38" y="96" width="24" height="2" rx="1.2" fill="#1a3a55" stroke={ac} strokeWidth="0.5" opacity="0.7"
+        style={{animation:'keyDown 0.6s 0.4s ease-in-out infinite'}}/>
+      <Head yOff={2} isSleeping={false} isFailed={false}/>
+    </svg>
+  );
+
+  if(isThink) return(
+    <svg width="100" height="100" viewBox="0 0 100 100" style={{overflow:'visible',display:'block'}}>
+      <ellipse cx="50" cy="98" rx="26" ry="2.5" fill="rgba(56,189,248,0.15)"/>
+      <rect x="33" y="52" width="24" height="24" rx="10" fill={color} opacity="0.95"/>
+      <path d="M41 52 Q45 58 49 52" fill="white" opacity="0.2"/>
+      <path d="M33 62 Q22 66 18 74" stroke={color} strokeWidth="6.5" fill="none" strokeLinecap="round"/>
+      <ellipse cx="17" cy="76" rx="5" ry="4" fill={sk}/>
+      <path d="M57 62 Q66 60 67 56" stroke={color} strokeWidth="6" fill="none" strokeLinecap="round"/>
+      <Head yOff={4} isSleeping={false} isFailed={false}/>
+      <circle cx="70" cy="10" r="11" fill="rgba(56,189,248,0.12)" stroke="#38bdf8" strokeWidth="1.3" style={{animation:'halo 2s ease-out infinite'}}/>
+      <circle cx="64" cy="1" r="5" fill="rgba(56,189,248,0.1)" stroke="#38bdf8" strokeWidth="1"/>
+      <circle cx="60" cy="-4" r="3" fill="rgba(56,189,248,0.08)" stroke="#38bdf8" strokeWidth="0.7"/>
+      <text x="70" y="14" fontSize="13" fill="#38bdf8" fontWeight="bold" textAnchor="middle" fontFamily="Arial, sans-serif">?</text>
+    </svg>
+  );
+
+  if(isFail) return(
+    <svg width="100" height="100" viewBox="0 0 100 100" style={{overflow:'visible',display:'block'}}>
+      <ellipse cx="50" cy="98" rx="28" ry="3" fill="rgba(239,68,68,0.15)"/>
+      <rect x="34" y="48" width="22" height="24" rx="9" fill={color} opacity="0.7"/>
+      <path d="M42 48 Q45 54 48 48" fill="white" opacity="0.15"/>
+      <path d="M56 54 Q62 56 62 68" stroke={color} strokeWidth="6" fill="none" strokeLinecap="round" opacity="0.6"/>
+      <ellipse cx="62" cy="70" rx="4" ry="3" fill={sk} opacity="0.6"/>
+      <path d="M34 54 Q28 56 28 68" stroke={color} strokeWidth="6" fill="none" strokeLinecap="round" opacity="0.6"/>
+      <ellipse cx="28" cy="70" rx="4" ry="3" fill={sk} opacity="0.6"/>
+      <rect x="24" y="62" width="42" height="20" rx="3" fill="#150505" stroke="#ef4444" strokeWidth="1.5" opacity="0.8"/>
+      <rect x="26" y="64" width="38" height="2" rx="1" fill="#ef4444" opacity="0.6"/>
+      <rect x="26" y="68" width="24" height="2" rx="1" fill="#ef4444" opacity="0.4"/>
+      <rect x="26" y="72" width="32" height="2" rx="1" fill="#ef4444" opacity="0.5"/>
+      <Head yOff={8} isSleeping={false} isFailed={true} tilt={-3}/>
+      <circle cx="55" cy="8" r="12" fill="none" stroke="#ef4444" strokeWidth="1.2" opacity="0.4" strokeDasharray="4 6" style={{animation:'haloRed 1s ease-out infinite'}}/>
+      <text x="52" y="12" fontSize="14" fontWeight="bold" fill="#ef4444" opacity="0.8">⚡</text>
+    </svg>
+  );
+
+  return(
+    <svg width="100" height="100" viewBox="0 0 100 100" style={{overflow:'visible',display:'block'}}>
+      <ellipse cx="50" cy="96" rx="34" ry="5" fill="rgba(129,140,248,0.12)"/>
+      <rect x="12" y="86" width="76" height="10" rx="3" fill="#0f172a" stroke={ac} strokeWidth="0.8" opacity="0.8"/>
+      <g style={{animation:'breathe 2.2s ease-in-out infinite', transformOrigin:'50% 70%'}}>
+        <rect x="32" y="52" width="26" height="28" rx="10" fill={color} opacity="0.9"/>
+        <path d="M40 52 Q45 58 50 52" fill="white" opacity="0.2"/>
+        <path d="M58 58 Q70 66 68 78" stroke={color} strokeWidth="7" fill="none" strokeLinecap="round"/>
+        <ellipse cx="68" cy="80" rx="5" ry="4" fill={sk}/>
+        <path d="M32 58 Q20 66 22 78" stroke={color} strokeWidth="7" fill="none" strokeLinecap="round"/>
+        <ellipse cx="22" cy="80" rx="5" ry="4" fill={sk}/>
+        <Head yOff={14} isSleeping={true} isFailed={false} tilt={-4}/>
+      </g>
+      <text x="72" y="28" fontFamily="Space Mono, monospace" fontSize="14" fontWeight="900" fill="#a78bfa" opacity="0" style={{animation:'zfBig 2.5s 0s ease-out infinite'}}>Z</text>
+      <text x="80" y="18" fontFamily="Space Mono, monospace" fontSize="11" fontWeight="900" fill="#a78bfa" opacity="0" style={{animation:'zfBig 2.5s 0.8s ease-out infinite'}}>Z</text>
+      <text x="86" y="10" fontFamily="Space Mono, monospace" fontSize="8" fontWeight="900" fill="#a78bfa" opacity="0" style={{animation:'zfBig 2.5s 1.6s ease-out infinite'}}>z</text>
+    </svg>
+  );
+};
+
+const AgentCard=({agent,refCb})=>{
+  const isWork=agent.status==='working', isThink=agent.status==='thinking', isSleep=agent.status==='sleeping', isFail=agent.status==='failed';
+  const isDelegating=isThink && agent.sub_state==='delegating';
+  const ac=isWork?'#34d399':isThink?'#38bdf8':isFail?'#ef4444':'#818cf8';
+  const cls=`card ${isSleep?'sw':isWork?'sa':isThink?'sp':'sf'}`;
+  return(
+    <div ref={refCb} className={cls}>
+      <div className="cbg"/><div className="shimmer"/>
+      <div className="hc htl"/><div className="hc htr"/><div className="hc hbl"/><div className="hc hbr"/>
+      <div className="scan"/><div className="pbar"><div className="pbf"/></div>
+
+      {isFail && (<div className="sparks"><span/><span/><span/><span/></div>)}
+
+      <div style={{position:'absolute',top:'7px',right:'9px',display:'flex',alignItems:'center',gap:'3px',zIndex:6}}>
+        <svg className="si" width="8" height="8" viewBox="0 0 8 8" style={{opacity:isSleep?0.22:0.9}}>
+          <circle cx="4" cy="4" r="3" fill="none" stroke={ac} strokeWidth="1" strokeDasharray="4 5"/>
+        </svg>
+        <span style={{fontFamily:'Space Mono,monospace',fontSize:'7px',fontWeight:700,
+          color:isSleep?'rgba(129,140,248,0.28)':ac,letterSpacing:'0.08em'}}>
+          {isSleep?'IDLE':isWork?'ACTIVE':isThink?'PROC':'FAILED'}
+        </span>
+      </div>
+
+      {isWork&&[0,1,2,3,4,5,6,7].map(i=><CodeParticle key={i} i={i} ac={ac}/>)}
+      {isSleep&&<div className="zzz"><span>Z</span><span>Z</span><span>z</span></div>}
+
+      <div className="avw" style={{position:'relative',zIndex:1,flex:1,display:'flex',alignItems:'center',justifyContent:'center',marginTop:'8px'}}>
+        <ChibiChar color={agent.color} gender={agent.gender} status={agent.status}/>
+      </div>
+      <div style={{textAlign:'center',position:'relative',zIndex:1,marginTop:'-4px'}}>
+        <div style={{fontSize:'11px',fontWeight:700,letterSpacing:'0.02em',lineHeight:1.2,
+          color:isSleep?'rgba(203,213,225,0.6)':'#f0f9ff',
+          textShadow:isSleep?'none':`0 0 12px ${ac}55`}}>
+          {agent.name}
+        </div>
+        <div style={{fontSize:'8px',fontWeight:700,fontFamily:'Space Mono,monospace',
+          textTransform:'uppercase',letterSpacing:'0.12em',marginTop:'2px',
+          color:isSleep?'rgba(129,140,248,0.32)':`${ac}cc`}}>
+          {agent.role}
+        </div>
+        {isDelegating && agent.delegated_to && (
+          <div style={{fontSize:'7px',marginTop:'3px',color:'#f59e0b',fontFamily:'Space Mono,monospace',opacity:0.85}}>
+            ⏳ بانتظار {agent.delegated_to}
+          </div>
+        )}
+        {isFail && agent.error && (
+          <div style={{fontSize:'7px',marginTop:'3px',color:'#ef4444',fontFamily:'Space Mono,monospace',opacity:0.8}}>
+            {agent.error}
+          </div>
+        )}
+      </div>
+      <div className={isDelegating?'waitDots':''} style={{display:'flex',alignItems:'center',gap:'3px',minHeight:'7px'}}>
+        {(isWork||isThink||isFail)?<>
+          <span className="td" style={{background:ac,boxShadow:`0 0 5px ${ac}`}}/>
+          <span className="td" style={{background:ac,boxShadow:`0 0 5px ${ac}`}}/>
+          <span className="td" style={{background:ac,boxShadow:`0 0 5px ${ac}`}}/>
+        </>:<span style={{fontFamily:'Space Mono,monospace',fontSize:'8px',color:'rgba(129,140,248,0.18)'}}>· · ·</span>}
+      </div>
+    </div>
+  );
+};
+
+/* التطبيق الرئيسي (كما هو مع ربط Socket.IO) */
+function App(){
+  const [agents,setAgents]=useState([]);
+  const [connections,setConnections]=useState([]);
+  const [logs,setLogs]=useState([]);
+  const [isOnline,setIsOnline]=useState(false);
+  const containerRef=useRef(null);
+  const agentRefs=useRef({});
+  const socketRef=useRef(null);
+
+  useEffect(()=>{
+    const cv=document.getElementById('bg');
+    if(!cv)return;
+    const ctx=cv.getContext('2d');
+    let W,H,raf;
+    const stars=[],dots=[];
+    const resize=()=>{W=cv.width=innerWidth;H=cv.height=innerHeight;};
+    resize();window.addEventListener('resize',resize);
+    for(let i=0;i<160;i++)stars.push({x:Math.random()*3000,y:Math.random()*2000,r:Math.random()*0.8+0.2,a:Math.random(),sp:Math.random()*0.004+0.001,c:['#818cf8','#38bdf8','#ffffff','#a78bfa'][Math.floor(Math.random()*4)]});
+    for(let i=0;i<30;i++)dots.push({x:Math.random()*3000,y:Math.random()*2000,vx:(Math.random()-0.5)*0.3,vy:-Math.random()*0.25-0.05,r:Math.random()*1.4+0.3,life:Math.random(),rgb:Math.random()>0.5?'56,189,248':'129,140,248'});
+    const draw=()=>{
+      ctx.clearRect(0,0,W,H);ctx.fillStyle='#010208';ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='rgba(56,189,248,0.022)';ctx.lineWidth=0.5;
+      for(let x=0;x<W;x+=48){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+      for(let y=0;y<H;y+=48){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+      const g1=ctx.createRadialGradient(W*.18,H*.5,0,W*.18,H*.5,W*.38);g1.addColorStop(0,'rgba(56,189,248,0.055)');g1.addColorStop(1,'transparent');ctx.fillStyle=g1;ctx.fillRect(0,0,W,H);
+      const g2=ctx.createRadialGradient(W*.82,H*.28,0,W*.82,H*.28,W*.32);g2.addColorStop(0,'rgba(167,139,250,0.065)');g2.addColorStop(1,'transparent');ctx.fillStyle=g2;ctx.fillRect(0,0,W,H);
+      stars.forEach(s=>{s.a+=s.sp;const al=(Math.sin(s.a)*0.5+0.5)*0.75+0.08;ctx.globalAlpha=al;ctx.fillStyle=s.c;ctx.beginPath();ctx.arc(s.x%W,s.y%H,s.r,0,Math.PI*2);ctx.fill();if(s.r>0.6&&al>0.6){ctx.globalAlpha=al*.3;ctx.beginPath();ctx.arc(s.x%W,s.y%H,s.r*2.5,0,Math.PI*2);ctx.fill();}});
+      ctx.globalAlpha=1;
+      dots.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.life+=0.0025;if(p.y<-10){p.y=H+10;p.x=Math.random()*W;p.life=0;}const al=Math.sin(p.life*Math.PI)*0.45;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=`rgba(${p.rgb},${al})`;ctx.fill();});
+      raf=requestAnimationFrame(draw);
+    };
+    draw();
+    return()=>{cancelAnimationFrame(raf);window.removeEventListener('resize',resize);};
+  },[]);
+
+  const addLog=useCallback((text,type='info')=>{
+    setLogs(prev=>[{id:Date.now()+Math.random(),text,type,time:new Date().toLocaleTimeString('ar-EG')},...prev].slice(0,60));
+  },[]);
+
+  useEffect(()=>{
+    socketRef.current=io('http://localhost:5000');
+    socketRef.current.on('connect',()=>{setIsOnline(true);addLog('اتصال مستقر مع المحرك','success');});
+    socketRef.current.on('disconnect',()=>{setIsOnline(false);addLog('فشل الاتصال بالسيرفر','error');setAgents(prev=>prev.map(a=>({...a,status:'sleeping',sub_state:undefined,delegated_to:undefined,error:undefined})));setConnections([]);});
+    socketRef.current.on('add_agent',data=>{setAgents(prev=>{const ex=prev.find(a=>a.id===data.id);if(ex)return prev.map(a=>a.id===data.id?{...a,...data,status:a.status}:a);return[...prev,{...data,status:'sleeping'}];});});
+    socketRef.current.on('set_agents',list=>setAgents(list.map(d=>({...d,status:'sleeping'}))));
+    socketRef.current.on('clear_agents',()=>{setAgents([]);setConnections([]);});
+    socketRef.current.on('ui_command',data=>{
+      if(data.action==='connection'){
+        const cid=`${data.agent_id}-${data.target_id}-${Date.now()}`;
+        setConnections(prev=>[...prev,{id:cid,from:data.agent_id,to:data.target_id}]);
+        setTimeout(()=>setConnections(prev=>prev.filter(c=>c.id!==cid)),4000);
+      } else {
+        setAgents(prev=>prev.map(a=>{
+          if(a.id===data.agent_id){
+            return {
+              ...a,
+              status: data.action,
+              sub_state: data.sub_state || undefined,
+              delegated_to: data.delegated_to || undefined,
+              error: data.message || undefined
+            };
+          }
+          return a;
+        }));
+      }
+    });
+    socketRef.current.on('server_log',data=>addLog(data.text,data.type));
+    return()=>socketRef.current.disconnect();
+  },[addLog]);
+
+  const tc=t=>t==='success'?'ts':t==='error'?'te':'ti';
+
+  return(
+    <div style={{height:'100%',display:'flex',flexDirection:'column',padding:'18px 22px',gap:'14px'}}>
+      <header style={{display:'flex',justifyContent:'space-between',alignItems:'center',borderBottom:'1px solid rgba(255,255,255,0.06)',paddingBottom:'13px'}}>
+        <div style={{fontFamily:'Space Mono,monospace',fontSize:'20px',fontWeight:700,color:'#fff',lineHeight:1}}>
+          AGENT<span style={{color:'#818cf8'}}>MESH</span>
+          <span style={{fontSize:'9px',color:'rgba(100,116,139,0.6)',marginRight:'10px',fontWeight:400}}> v3.5 DYNAMIC</span>
+        </div>
+        <div style={{padding:'5px 14px',borderRadius:'100px',fontSize:'9px',fontWeight:700,textTransform:'uppercase',letterSpacing:'0.08em',display:'flex',alignItems:'center',gap:'6px',fontFamily:'Space Mono,monospace',background:isOnline?'rgba(52,211,153,0.07)':'rgba(239,68,68,0.07)',border:`1px solid ${isOnline?'rgba(52,211,153,0.25)':'rgba(239,68,68,0.25)'}`,color:isOnline?'#34d399':'#ef4444'}}>
+          <span style={{width:'6px',height:'6px',borderRadius:'50%',background:isOnline?'#34d399':'#ef4444',display:'inline-block',animation:isOnline?'op 2s ease-in-out infinite':'none'}}/>
+          {isOnline?'Engine Online':'Engine Offline'}
+        </div>
+      </header>
+
+      <div ref={containerRef} style={{flex:1,display:'flex',gap:'14px',overflow:'hidden',position:'relative'}}>
+        <svg style={{position:'absolute',inset:0,width:'100%',height:'100%',pointerEvents:'none',zIndex:0}}>
+          <defs><filter id="cg"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+          {connections.map((conn,idx)=>{
+            const eA=agentRefs.current[conn.from],eB=agentRefs.current[conn.to];
+            if(!eA||!eB||!containerRef.current)return null;
+            const rA=eA.getBoundingClientRect(),rB=eB.getBoundingClientRect(),c=containerRef.current.getBoundingClientRect();
+            const x1=rA.left-c.left+rA.width/2,y1=rA.top-c.top+rA.height;
+            const x2=rB.left-c.left+rB.width/2,y2=rB.top-c.top+rB.height;
+            const rY=Math.max(y1,y2)+28+(idx%4)*14,r=8;
+            let d;
+            if(Math.abs(x1-x2)<4){d=`M${x1} ${y1} L${x2} ${y2}`;}
+            else if(x1<x2){d=`M${x1} ${y1} L${x1} ${rY-r} Q${x1} ${rY} ${x1+r} ${rY} L${x2-r} ${rY} Q${x2} ${rY} ${x2} ${rY-r} L${x2} ${y2}`;}
+            else{d=`M${x1} ${y1} L${x1} ${rY-r} Q${x1} ${rY} ${x1-r} ${rY} L${x2+r} ${rY} Q${x2} ${rY} ${x2} ${rY-r} L${x2} ${y2}`;}
+            return(
+              <g key={conn.id} filter="url(#cg)">
+                <path d={d} fill="none" stroke="rgba(99,102,241,0.15)" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d={d} fill="none" stroke="#818cf8" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="10 6" style={{animation:'dashFlow 1.8s linear infinite'}}/>
+                <circle cx={x1} cy={y1} r="4" fill="#818cf8"/>
+                <circle cx={x1} cy={y1} r="8" fill="none" stroke="#818cf8" strokeWidth="1" opacity="0.35" style={{animation:'halo 1.5s ease-out infinite'}}/>
+                <circle cx={x2} cy={y2} r="4" fill="#818cf8"/>
+                <polygon points={`${x2},${y2-10} ${x2-5},${y2-17} ${x2+5},${y2-17}`} fill="#818cf8" opacity="0.85"/>
+              </g>
             );
-        };
+          })}
+        </svg>
 
-        const AgentCard = ({ agent, refCallback }) => {
-            const stateClass = `state-${agent.status}`;
-            const isWorking = agent.status === 'working';
-            const isThinking = agent.status === 'thinking';
-            const isSleeping = agent.status === 'sleeping';
+        <div style={{flex:1,overflowY:'auto',zIndex:10,paddingLeft:'2px'}}>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(170px,1fr))',gap:'12px'}}>
+            {agents.map(ag=><AgentCard key={ag.id} agent={ag} refCb={el=>agentRefs.current[ag.id]=el}/>)}
+          </div>
+        </div>
 
-            return (
-                <div
-                    ref={refCallback}
-                    className={`agent-card ${stateClass} card-enter`}
-                    style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', height: '170px' }}
-                >
-                    <div className="corner-dot" />
-                    <div className="scan-line" />
-                    <div className="progress-bar" />
-                    <div className="particle p1" />
-                    <div className="particle p2" />
-                    <div className="particle p3" />
+        <div className="logp">
+          <div className="lhdr">
+            <div className="lhd"/>
+            <span className="ltitle">SYS · TERMINAL</span>
+            <span className="lcnt">{logs.length}</span>
+          </div>
+          <div className="lbody">
+            {logs.length===0&&<div className="empt">AWAITING SIGNAL...</div>}
+            {logs.map(log=>(
+              <div key={log.id} className={`li ${tc(log.type)}`}>
+                <div className="ltime">{log.time}</div>
+                <div className={`ltxt ${tc(log.type)}`}>{log.text}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
-                    <AgentAvatar color={agent.color} gender={agent.gender} status={agent.status} />
-
-                    {isSleeping && (
-                        <div className="zzz-wrap" style={{position:'absolute',inset:0,pointerEvents:'none'}}>
-                            <span>Z</span><span>Z</span><span>z</span>
-                        </div>
-                    )}
-
-                    <div style={{ textAlign: 'center', marginTop: '2px' }}>
-                        <div style={{ fontSize: '12px', fontWeight: 700, color: '#f1f5f9', letterSpacing: '0.01em', lineHeight: 1.2 }}>
-                            {agent.name}
-                        </div>
-                        <div style={{ fontSize: '9px', fontWeight: 700, color: isWorking ? '#10b981' : isThinking ? '#0ea5e9' : 'rgba(99,102,241,0.7)', textTransform: 'uppercase', letterSpacing: '0.12em', marginTop: '2px', fontFamily: 'Space Mono, monospace' }}>
-                            {agent.role}
-                        </div>
-                    </div>
-
-                    {(isWorking || isThinking) && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '2px', marginTop: '2px' }}>
-                            <span className="think-dot" style={{ background: isWorking ? '#10b981' : '#0ea5e9' }} />
-                            <span className="think-dot" style={{ background: isWorking ? '#10b981' : '#0ea5e9' }} />
-                            <span className="think-dot" style={{ background: isWorking ? '#10b981' : '#0ea5e9' }} />
-                        </div>
-                    )}
-                </div>
-            );
-        };
-
-        function App() {
-            const [agents, setAgents] = useState([]);
-            const [connections, setConnections] = useState([]);
-            const [logs, setLogs] = useState([]);
-            const [isOnline, setIsOnline] = useState(false);
-            const containerRef = useRef(null);
-            const agentRefs = useRef({});
-            const socketRef = useRef(null);
-
-            const addLog = useCallback((text, type = 'info') => {
-                setLogs(prev => [{
-                    id: Date.now() + Math.random(),
-                    text, type,
-                    time: new Date().toLocaleTimeString('ar-EG')
-                }, ...prev].slice(0, 60));
-            }, []);
-
-            useEffect(() => {
-                socketRef.current = io('http://localhost:5000');
-                socketRef.current.on('connect', () => { setIsOnline(true); addLog('اتصال مستقر مع المحرك', 'success'); });
-                socketRef.current.on('disconnect', () => {
-                    setIsOnline(false);
-                    addLog('فشل الاتصال بالسيرفر', 'error');
-                    setAgents(prev => prev.map(a => ({ ...a, status: 'sleeping' })));
-                    setConnections([]);
-                });
-                socketRef.current.on('add_agent', (data) => {
-                    setAgents(prev => {
-                        const exists = prev.find(a => a.id === data.id);
-                        if (exists) {
-                            // وكيل موجود → حدّث بياناته فقط، لا تمس الـ status
-                            return prev.map(a => a.id === data.id ? { ...a, ...data, status: a.status } : a);
-                        }
-                        return [...prev, { ...data, status: 'sleeping' }];
-                    });
-                });
-
-                // حدث اختياري: السيرفر يرسل قائمة كاملة جديدة → استبدال كامل
-                socketRef.current.on('set_agents', (list) => {
-                    setAgents(list.map(d => ({ ...d, status: 'sleeping' })));
-                });
-
-                // حدث اختياري: مسح كل الوكلاء
-                socketRef.current.on('clear_agents', () => {
-                    setAgents([]);
-                    setConnections([]);
-                });
-                socketRef.current.on('ui_command', (data) => {
-                    if (data.action === 'connection') {
-                        const connId = `${data.agent_id}-${data.target_id}-${Date.now()}`;
-                        setConnections(prev => [...prev, { id: connId, from: data.agent_id, to: data.target_id }]);
-                        setTimeout(() => setConnections(prev => prev.filter(c => c.id !== connId)), 4000);
-                    } else {
-                        setAgents(prev => prev.map(a => a.id === data.agent_id ? { ...a, status: data.action } : a));
-                    }
-                });
-                socketRef.current.on('server_log', (data) => addLog(data.text, data.type));
-                return () => socketRef.current.disconnect();
-            }, [addLog]);
-
-            return (
-                <div style={{ height: '100%', display: 'flex', flexDirection: 'column', padding: '20px 24px', gap: '16px' }}>
-
-                    {/* Header */}
-                    <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '14px' }}>
-                        <div>
-                            <div className="header-logo" style={{ fontSize: '20px', fontWeight: 700, color: '#fff', lineHeight: 1 }}>
-                                AGENT<span style={{ color: '#6366f1' }}>MESH</span>
-                                <span style={{ fontSize: '9px', color: 'rgba(100,116,139,0.7)', marginRight: '10px', fontWeight: 400 }}>v3.5 DYNAMIC</span>
-                            </div>
-                        </div>
-                        <div className="status-pill" style={{
-                            padding: '5px 14px',
-                            borderRadius: '100px',
-                            fontSize: '9px',
-                            fontWeight: 700,
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.08em',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            background: isOnline ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)',
-                            border: `1px solid ${isOnline ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.25)'}`,
-                            color: isOnline ? '#10b981' : '#ef4444',
-                        }}>
-                            <span style={{
-                                width: '6px', height: '6px', borderRadius: '50%',
-                                background: isOnline ? '#10b981' : '#ef4444',
-                                display: 'inline-block',
-                                animation: isOnline ? 'onlinePulse 2s ease-in-out infinite' : 'none'
-                            }} />
-                            {isOnline ? 'Engine Online' : 'Engine Offline'}
-                        </div>
-                    </header>
-
-                    {/* Main */}
-                    <div style={{ flex: 1, display: 'flex', gap: '16px', overflow: 'hidden', position: 'relative' }} ref={containerRef}>
-
-                        {/* SVG Connections */}
-                        <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0 }}>
-                            <defs>
-                                <filter id="glow">
-                                    <feGaussianBlur stdDeviation="3" result="blur" />
-                                    <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-                                </filter>
-                            </defs>
-                            {connections.map((conn, idx) => {
-                                const elA = agentRefs.current[conn.from];
-                                const elB = agentRefs.current[conn.to];
-                                if (!elA || !elB || !containerRef.current) return null;
-                                const rA = elA.getBoundingClientRect();
-                                const rB = elB.getBoundingClientRect();
-                                const c = containerRef.current.getBoundingClientRect();
-
-                                // نقطة الخروج: أسفل البطاقة A — مركزها أفقياً
-                                const x1 = rA.left - c.left + rA.width / 2;
-                                const y1 = rA.top - c.top + rA.height;
-
-                                // نقطة الوصول: أسفل البطاقة B — مركزها أفقياً
-                                const x2 = rB.left - c.left + rB.width / 2;
-                                const y2 = rB.top - c.top + rB.height;
-
-                                // مستوى التوجيه أسفل البطاقتين + هامش يتغير بالـ index لمنع التداخل
-                                const routeOffset = 28 + (idx % 4) * 14;
-                                const routeY = Math.max(y1, y2) + routeOffset;
-
-                                // المسار: أسفل A → نزول عمودي → أفقي → صعود لأسفل B
-                                const r = 8; // نصف قطر الزوايا المدوّرة
-                                const goDown1 = routeY - y1; // المسافة الرأسية من A للخط الأفقي
-                                const goDown2 = routeY - y2; // المسافة الرأسية من B للخط الأفقي
-
-                                let d;
-                                if (Math.abs(x1 - x2) < 4) {
-                                    // نفس العمود تقريباً — خط مستقيم بسيط
-                                    d = `M ${x1} ${y1} L ${x2} ${y2}`;
-                                } else if (x1 < x2) {
-                                    // A على اليسار → B على اليمين
-                                    d = `M ${x1} ${y1}
-                                         L ${x1} ${routeY - r}
-                                         Q ${x1} ${routeY} ${x1 + r} ${routeY}
-                                         L ${x2 - r} ${routeY}
-                                         Q ${x2} ${routeY} ${x2} ${routeY - r}
-                                         L ${x2} ${y2}`;
-                                } else {
-                                    // A على اليمين → B على اليسار
-                                    d = `M ${x1} ${y1}
-                                         L ${x1} ${routeY - r}
-                                         Q ${x1} ${routeY} ${x1 - r} ${routeY}
-                                         L ${x2 + r} ${routeY}
-                                         Q ${x2} ${routeY} ${x2} ${routeY - r}
-                                         L ${x2} ${y2}`;
-                                }
-
-                                const connColor = '#818cf8';
-                                const pathLen = 200 + Math.abs(x1 - x2) + Math.abs(y1 - y2);
-
-                                return (
-                                    <g key={conn.id}>
-                                        {/* ظل متوهج خلف الخط */}
-                                        <path d={d} fill="none"
-                                            stroke="rgba(99,102,241,0.18)" strokeWidth="6"
-                                            strokeLinecap="round" strokeLinejoin="round" />
-                                        {/* الخط الرئيسي المتحرك */}
-                                        <path d={d} fill="none"
-                                            stroke={connColor} strokeWidth="1.8"
-                                            strokeLinecap="round" strokeLinejoin="round"
-                                            strokeDasharray="10 6"
-                                            style={{ animation: 'dashFlow 1.8s linear infinite' }} />
-                                        {/* نقطة البداية (مرسِل) */}
-                                        <circle cx={x1} cy={y1} r="4" fill={connColor} opacity="0.95" />
-                                        <circle cx={x1} cy={y1} r="7" fill="none" stroke={connColor} strokeWidth="1" opacity="0.4"
-                                            style={{ animation: 'pulseDot 1.5s ease-in-out infinite' }} />
-                                        {/* نقطة النهاية (مستقبِل) مع سهم صغير */}
-                                        <circle cx={x2} cy={y2} r="4" fill={connColor} opacity="0.95" />
-                                        <polygon
-                                            points={`${x2},${y2 - 10} ${x2 - 5},${y2 - 17} ${x2 + 5},${y2 - 17}`}
-                                            fill={connColor} opacity="0.85" />
-                                    </g>
-                                );
-                            })}
-                        </svg>
-
-                        {/* Agents Grid */}
-                        <div style={{ flex: 1, overflowY: 'auto', zIndex: 10 }}
-                             className="custom-scrollbar"
-                             style={{ flex: 1, overflowY: 'auto', zIndex: 10, paddingLeft: '4px' }}>
-                            <div style={{
-                                display: 'grid',
-                                gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
-                                gap: '12px'
-                            }}>
-                                {agents.map(agent => (
-                                    <AgentCard
-                                        key={agent.id}
-                                        agent={agent}
-                                        refCallback={el => agentRefs.current[agent.id] = el}
-                                    />
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Log Panel */}
-                        <aside style={{
-                            width: '270px',
-                            background: 'rgba(8,15,30,0.7)',
-                            backdropFilter: 'blur(20px)',
-                            border: '1px solid rgba(255,255,255,0.05)',
-                            borderRadius: '18px',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            padding: '16px',
-                            zIndex: 20,
-                        }}>
-                            <div style={{
-                                fontSize: '9px',
-                                fontWeight: 700,
-                                color: 'rgba(99,102,241,0.6)',
-                                textTransform: 'uppercase',
-                                letterSpacing: '0.15em',
-                                marginBottom: '12px',
-                                fontFamily: 'Space Mono, monospace',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                            }}>
-                                <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#6366f1', display: 'inline-block', animation: 'pulseDot 2s infinite' }} />
-                                System Logs
-                            </div>
-                            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}
-                                 className="custom-scrollbar">
-                                {logs.map(log => (
-                                    <div key={log.id} className="log-item" style={{
-                                        padding: '6px 8px',
-                                        background: 'rgba(0,0,0,0.25)',
-                                        borderRadius: '8px',
-                                        borderRight: `2px solid ${log.type === 'success' ? '#10b981' : log.type === 'error' ? '#ef4444' : '#6366f1'}`,
-                                        fontSize: '10px',
-                                        fontFamily: 'Space Mono, monospace',
-                                        lineHeight: 1.5,
-                                    }}>
-                                        <span style={{ color: 'rgba(100,116,139,0.6)', marginLeft: '4px', fontSize: '9px' }}>[{log.time}]</span>
-                                        <span style={{ color: log.type === 'success' ? '#6ee7b7' : log.type === 'error' ? '#fca5a5' : '#c7d2fe' }}>
-                                            {log.text}
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
-                        </aside>
-                    </div>
-                </div>
-            );
-        }
-
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
-    </script>
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
 </body>
 </html>
